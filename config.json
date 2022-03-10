@@ -1,0 +1,19 @@
+{
+    "info": {
+        "name": "SettingsSync",
+        "authors": [{
+            "name": "ImTheSquid",
+            "discord_id": "262055523896131584",
+            "github_username": "ImTheSquid",
+            "twitter_username": "ImTheSquid11"
+        }],
+        "version": "0.0.1",
+        "description": "Creates an easy way to sync plugins, themes, and settings between clients.",
+        "github": "https://github.com/ImTheSquid/BDSettingsSync",
+        "github_raw": "https://raw.githubusercontent.com/ImTheSquid/BDSettingsSync/master/SettingsSync.plugin.js"
+    },
+    "changelog": [
+        {"title": "First Version", "items": ["Hello, World!"]}
+    ],
+    "main": "bundled.js"
+}

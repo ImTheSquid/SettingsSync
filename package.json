@@ -1,0 +1,15 @@
+{
+  "name": "settingssync",
+  "version": "1.0.0",
+  "description": "BD SettingsSync",
+  "main": "SettingsSync.plugin.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ImTheSquid",
+  "license": "MIT",
+  "dependencies": {
+    "glob": "^7.2.0",
+    "minizip-asm.js": "^1.0.10"
+  }
+}
