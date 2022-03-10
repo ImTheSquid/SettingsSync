@@ -1,8 +1,9 @@
 module.exports = (Plugin, Library) => {
     "use strict";
 
-    const {Logger, Patcher, WebpackModules, ContextMenu, DiscordModules, Modals, DiscordClassModules, PluginUtilities} = Library;
+    const {Logger, Patcher, WebpackModules, Settings, DiscordModules, Modals, DiscordClassModules, PluginUtilities} = Library;
     const {Dispatcher} = DiscordModules;
+    const {SettingPanel, Switch, Keybind} = Settings;
     const {React, ReactDOM} = BdApi;
 
     class UploadCompleteModal extends React.Component {
@@ -14,7 +15,6 @@ module.exports = (Plugin, Library) => {
 
         handleClick(e) {
             e.preventDefault();
-            Logger.log("COPY!");
             require("electron").clipboard.writeText(this.state.link);
             this.setState(oldState => oldState["showCopied"] = true);
         }
@@ -42,13 +42,17 @@ module.exports = (Plugin, Library) => {
         syncPlugins: boolean;
         syncPluginSettings: boolean;
         syncThemes: boolean;
+        overwrite: boolean;
+        syncPushKeys: Array<number>;
+        syncPullKeys: Array<number>;
     }
 
     // Settings
     const defaultSettings: Settings = {
         syncPlugins: true,
         syncPluginSettings: true,
-        syncThemes: true
+        syncThemes: true,
+        overwrite: false
     };
 
     let settings: Settings = defaultSettings;
@@ -88,21 +92,49 @@ module.exports = (Plugin, Library) => {
              BdApi.clearCSS("SettingsSync");
         };
 
+        getSettingsPanel() {
+            reloadSettings();
+            return new SettingPanel(() => { PluginUtilities.saveSettings("SettingsSync", settings); },
+                new Switch("Sync Plugins", "Include plugins in synchronization.", settings.syncPlugins, on => { settings.syncPlugins = on; }),
+                new Switch("Sync Plugins Settings", "Include plugin settings in synchronization.", settings.syncPluginSettings, on => { settings.syncPluginSettings = on; }),
+                new Switch("Sync Themes", "Include themes in synchronization.", settings.syncThemes, on => { settings.syncThemes = on; }),
+                new Switch("Overwrite Data", "Overwrite local data on sync.", settings.overwrite, on => { settings.overwrite = on; })
+            ).getElement();
+        }
+
         compressBD(password?: string) {
-            const zip = require('minizip-asm.js');
+            const Minizip = require('minizip-asm.js');
             const glob = require("glob");
+            const path = require("path");
+
+            let zipFile = new Minizip();
+
+            let options = {
+                encoding: "utf-8"
+            }
+            if (password != null) {
+                options["password"] = password;
+            }
 
             // Collect all specified files
+            let paths: Array<string> = [];
             if (settings.syncPlugins) {
-
+                paths.push(...glob.sync(path.join(BdApi.Plugins.folder, "*.plugin.js")));
             }
 
             if (settings.syncPluginSettings) {
+                paths.push(...glob.sync(path.join(BdApi.Plugins.folder, "*.config.json")));
+            }
 
+            for (const pathStr of paths) {
+                zipFile.append(`plugins/${path.basename(pathStr)}`, pathStr, options);
             }
 
             if (settings.syncThemes) {
-
+                const paths = glob.sync(path.join(BdApi.Plugins.folder, "*.theme.css"));
+                for (const pathStr of paths) {
+                    zipFile.append(`themes/${path.basename(pathStr)}`, pathStr, options);
+                }
             }
         }
     };
