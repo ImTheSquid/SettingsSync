@@ -38,6 +38,7 @@ module.exports = (Plugin, Library) => {
         return <UploadCompleteModal link={link}/>;
     }
 
+    // Settings
     interface Settings {
         syncPlugins: boolean;
         syncPluginSettings: boolean;
@@ -47,7 +48,6 @@ module.exports = (Plugin, Library) => {
         syncPullKeys: Array<number>;
     }
 
-    // Settings
     const defaultSettings: Settings = {
         syncPlugins: true,
         syncPluginSettings: true,
@@ -131,7 +131,7 @@ module.exports = (Plugin, Library) => {
             }
 
             if (settings.syncThemes) {
-                const paths = glob.sync(path.join(BdApi.Plugins.folder, "*.theme.css"));
+                const paths = glob.sync(path.join(BdApi.Themes.folder, "*.theme.css"));
                 for (const pathStr of paths) {
                     zipFile.append(`themes/${path.basename(pathStr)}`, pathStr, options);
                 }
