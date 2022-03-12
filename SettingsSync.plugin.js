@@ -18365,9 +18365,8 @@ var require_glob = __commonJS({
 // index.tsx
   "use strict";
   const { Logger, Patcher, WebpackModules, Settings, DiscordModules, Modals, DiscordClassModules, PluginUtilities } = Library;
-  const { Dispatcher } = DiscordModules;
   const { SettingPanel, Switch } = Settings;
-  const { React, ReactDOM } = BdApi;
+  const { React } = BdApi;
   class UploadCompleteModal extends React.Component {
     constructor(props) {
       super(props);
@@ -18390,12 +18389,124 @@ var require_glob = __commonJS({
       }, "Copied!"));
     }
   }
-  class MenuModal extends React.Component {
+  function SwitchButton(props) {
+    return /* @__PURE__ */ React.createElement("button", {
+      onClick: props.onClick,
+      className: "switchButton"
+    }, props.children, /* @__PURE__ */ React.createElement("p", null, props.title));
+  }
+  function MainMenu(props) {
+    return /* @__PURE__ */ React.createElement("div", {
+      className: "mainMenu"
+    }, /* @__PURE__ */ React.createElement(SwitchButton, {
+      title: "Download",
+      onClick: () => {
+        props.onClick(0);
+      }
+    }, /* @__PURE__ */ React.createElement("svg", {
+      fill: "currentColor",
+      preserveAspectRatio: "xMidYMid meet",
+      viewBox: "0 0 24 24"
+    }, /* @__PURE__ */ React.createElement("g", null, /* @__PURE__ */ React.createElement("rect", null)), /* @__PURE__ */ React.createElement("g", null, /* @__PURE__ */ React.createElement("path", {
+      d: "M5,20h14v-2H5V20z M19,9h-4V3H9v6H5l7,7L19,9z"
+    })))), /* @__PURE__ */ React.createElement(SwitchButton, {
+      title: "Upload",
+      onClick: () => {
+        props.onClick(2);
+      }
+    }, /* @__PURE__ */ React.createElement("svg", {
+      fill: "currentColor",
+      preserveAspectRatio: "xMidYMid meet",
+      viewBox: "0 0 24 24"
+    }, /* @__PURE__ */ React.createElement("g", null, /* @__PURE__ */ React.createElement("rect", null)), /* @__PURE__ */ React.createElement("g", null, /* @__PURE__ */ React.createElement("path", {
+      d: "M5,20h14v-2H5V20z M5,10h4v6h6v-6h4l-7-7L5,10z"
+    })))));
+  }
+  class UploadMenu extends React.Component {
+    constructor(props) {
+      super(props);
+      this.onUploadClicked = this.onUploadClicked.bind(this);
+      this.state = {
+        isUploading: false
+      };
+    }
+    onUploadClicked() {
+      this.setState({ isUploading: true });
+    }
+    renderUploadReady(listItems) {
+      return /* @__PURE__ */ React.createElement("div", {
+        className: "uploadReady"
+      }, /* @__PURE__ */ React.createElement("p", {
+        className: "uploadHeader"
+      }, "Upload Manifest:"), /* @__PURE__ */ React.createElement("ul", null, listItems), /* @__PURE__ */ React.createElement("p", {
+        class: "uploadHeaderNotTop"
+      }, "Password (Optional):"), /* @__PURE__ */ React.createElement("input", {
+        type: "password",
+        className: "uploadPassword"
+      }));
+    }
+    renderCantUpload() {
+      return /* @__PURE__ */ React.createElement("p", {
+        className: "cantUpload"
+      }, "Looks like you don't have anything selected to upload! You can change this in the SettingsSync plugin settings.");
+    }
+    render() {
+      let listItems = [];
+      if (settings.syncPlugins) {
+        listItems.push(/* @__PURE__ */ React.createElement("li", null, "Plugins"));
+      }
+      if (settings.syncPluginSettings) {
+        listItems.push(/* @__PURE__ */ React.createElement("li", null, "Plugin Settings"));
+      }
+      if (settings.syncThemes) {
+        listItems.push(/* @__PURE__ */ React.createElement("li", null, "Themes"));
+      }
+      if (settings.syncMeta) {
+        listItems.push(/* @__PURE__ */ React.createElement("li", null, "BD Metadata"));
+      }
+      return /* @__PURE__ */ React.createElement("div", null, listItems.length > 0 && this.renderUploadReady(listItems), listItems.length == 0 && this.renderCantUpload());
+    }
+  }
+  class DownloadMenu extends React.Component {
     constructor(props) {
       super(props);
     }
     render() {
-      return /* @__PURE__ */ React.createElement("p", null, "Hi");
+      return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", null, "DOWNLOAD"));
+    }
+  }
+  class MenuModal extends React.Component {
+    constructor(props) {
+      super(props);
+      this.slidesMod = props.slidesMod;
+      this.state = { activeSlide: 1 };
+      this.onMenuChange = this.onMenuChange.bind(this);
+    }
+    onMenuChange(target) {
+      this.setState({ activeSlide: target });
+    }
+    render() {
+      Logger.log(this.slidesMod);
+      return React.createElement(this.slidesMod, {
+        activeSlide: this.state.activeSlide,
+        springConfig: { clamp: true, friction: 20, tension: 210 },
+        width: 400
+      }, [
+        /* @__PURE__ */ React.createElement("div", {
+          id: 0,
+          children: /* @__PURE__ */ React.createElement(DownloadMenu, null)
+        }),
+        /* @__PURE__ */ React.createElement("div", {
+          id: 1,
+          children: /* @__PURE__ */ React.createElement(MainMenu, {
+            onClick: this.onMenuChange
+          })
+        }),
+        /* @__PURE__ */ React.createElement("div", {
+          id: 2,
+          children: /* @__PURE__ */ React.createElement(UploadMenu, null)
+        })
+      ]);
     }
   }
   const SyncIconButton = () => {
@@ -18416,12 +18527,52 @@ var require_glob = __commonJS({
     syncPlugins: true,
     syncPluginSettings: true,
     syncThemes: true,
+    syncMeta: true,
     overwrite: false
   };
   let settings = defaultSettings;
   const reloadSettings = () => {
     settings = PluginUtilities.loadSettings("SettingsSync", defaultSettings);
   };
+  async function compressBD(password) {
+    const Minizip2 = require_minizip_asm_min();
+    const glob = require_glob();
+    const path2 = require("path");
+    let zipFile = new Minizip2();
+    let options = {
+      encoding: "utf-8"
+    };
+    if (password != null) {
+      options["password"] = password;
+    }
+    let paths = [];
+    if (settings.syncPlugins) {
+      paths.push(...glob.sync(path2.join(BdApi.Plugins.folder, "*.plugin.js")));
+    }
+    if (settings.syncPluginSettings) {
+      paths.push(...glob.sync(path2.join(BdApi.Plugins.folder, "*.config.json")));
+    }
+    for (const pathStr of paths) {
+      zipFile.append(`plugins/${path2.basename(pathStr)}`, pathStr, options);
+    }
+    if (settings.syncThemes) {
+      const paths2 = glob.sync(path2.join(BdApi.Themes.folder, "*.theme.css"));
+      for (const pathStr of paths2) {
+        zipFile.append(`themes/${path2.basename(pathStr)}`, pathStr, options);
+      }
+    }
+    if (settings.syncMeta) {
+      const paths2 = glob.sync(path2.join(BdApi.Plugins.folder, "../data/stable", "*.*"));
+      for (const pathStr of paths2) {
+        zipFile.append(`stable/${path2.basename(pathStr)}`, pathStr, options);
+      }
+    }
+    const fs2 = require("fs");
+    const id = require("crypto").randomBytes(16).toString("hex");
+    const tempFolder = await fs2.mkdtemp(path2.join(require("os").tmpdir(), `ss-upload-${id}`));
+    await fs2.writeFile(path2.join(tempFolder, "upload.zip"), zipFile.zip());
+    return "";
+  }
   class SettingsSync extends Plugin {
     onStart() {
       this.headerBar = WebpackModules.find((mod) => {
@@ -18432,12 +18583,13 @@ var require_glob = __commonJS({
         var _a;
         return ((_a = mod.default) == null ? void 0 : _a.displayName) === "Clickable";
       });
+      this.slides = WebpackModules.find((mod) => mod.hasOwnProperty("Slides"));
       reloadSettings();
       Patcher.after(this.headerBar.default.prototype, "renderLoggedIn", (_, [arg2], ret) => {
         ret.props.toolbar.props.children.push(React.createElement(this.clickable.default, {
           "aria-label": "SettingsSync",
           className: `iconWrapper clickable`,
-          onClick: this.openSyncModal,
+          onClick: this.openSyncModal.bind(this),
           role: "button"
         }, [/* @__PURE__ */ React.createElement(SyncIconButton, null)]));
       });
@@ -18472,10 +18624,67 @@ var require_glob = __commonJS({
                 .clickable:hover .icon {
                     color: var(--interactive-hover);
                 }
+
+                .mainMenu {
+                    display: flex;
+                    flex-direction: row;
+                }
+
+                .switchButton {
+                    width: 50%;
+                    background-color: transparent;
+                    border: 3px solid var(--interactive-normal);
+                    border-radius: 10px;
+                    margin: 5px;
+                    color: var(--interactive-normal);
+                    font-size: large;
+                    font-weight: bold;
+                }
+
+                .switchButton p {
+                    margin: 0 0 5px 0;
+                }
+
+                .switchButton:hover {
+                    color: var(--interactive-hover);
+                    fill: var(--interactive-hover);
+                    border: 3px solid var(--interactive-hover);
+                }
+
+                .cantUpload {
+                    color: var(--info-warning-foreground);
+                }
+
+                .uploadReady {
+                    color: var(--text-normal);
+                }
+
+                .uploadPassword {
+                    width: 100%;
+                    padding: 5px;
+                }
+
+                .uploadReady li {
+                    display: list-item;
+                    list-style-position: inside;
+                    list-style-type: circle;
+                }
+
+                .uploadHeader {
+                    font-weight: bold;
+                    margin: 0 0 5px 0;
+                }
+
+                .uploadHeaderNotTop {
+                    font-weight: bold;
+                    margin: 10px 0 5px 0;
+                }
             `);
     }
     openSyncModal() {
-      Modals.showModal("SettingsSync Menu", /* @__PURE__ */ React.createElement(MenuModal, null), {});
+      Modals.showModal("SettingsSync Menu", /* @__PURE__ */ React.createElement(MenuModal, {
+        slidesMod: this.slides.Slides
+      }), { cancelText: "Cancel", confirmText: null });
     }
     onStop() {
       Patcher.unpatchAll();
@@ -18491,37 +18700,11 @@ var require_glob = __commonJS({
         settings.syncPluginSettings = on;
       }), new Switch("Sync Themes", "Include themes in synchronization.", settings.syncThemes, (on) => {
         settings.syncThemes = on;
-      }), new Switch("Overwrite Data", "Overwrite local data on sync.", settings.overwrite, (on) => {
+      }), new Switch("Sync Meta", "Include BetterDiscord configuration files in synchronziation. This includes which plugins and themes are enabled as well as everything under the Settings, Emotes, Custom CSS and other tabs.", settings.syncMeta, (on) => {
+        settings.syncMeta = on;
+      }), new Switch("Overwrite Data", "Overwrite local data on sync. Always on for files synced under Sync Meta.", settings.overwrite, (on) => {
         settings.overwrite = on;
       })).getElement();
-    }
-    compressBD(password) {
-      const Minizip2 = require_minizip_asm_min();
-      const glob = require_glob();
-      const path2 = require("path");
-      let zipFile = new Minizip2();
-      let options = {
-        encoding: "utf-8"
-      };
-      if (password != null) {
-        options["password"] = password;
-      }
-      let paths = [];
-      if (settings.syncPlugins) {
-        paths.push(...glob.sync(path2.join(BdApi.Plugins.folder, "*.plugin.js")));
-      }
-      if (settings.syncPluginSettings) {
-        paths.push(...glob.sync(path2.join(BdApi.Plugins.folder, "*.config.json")));
-      }
-      for (const pathStr of paths) {
-        zipFile.append(`plugins/${path2.basename(pathStr)}`, pathStr, options);
-      }
-      if (settings.syncThemes) {
-        const paths2 = glob.sync(path2.join(BdApi.Themes.folder, "*.theme.css"));
-        for (const pathStr of paths2) {
-          zipFile.append(`themes/${path2.basename(pathStr)}`, pathStr, options);
-        }
-      }
     }
   }
   ;
