@@ -5,6 +5,17 @@ module.exports = (Plugin, Library) => {
     const {SettingPanel, Switch} = Settings;
     const {React} = BdApi;
 
+    const {ModalRoot, ModalHeader, ModalContent, ModalFooter} = BdApi.findModuleByProps("ModalRoot");
+    const Button = BdApi.findModuleByProps("BorderColors");
+    const ModalActions = BdApi.findModuleByProps("openModal", "useModalsStore");
+    const headerBar = WebpackModules.find(mod => mod.default?.displayName === "HeaderBarContainer");
+    const clickable = WebpackModules.find(mod => mod.default?.displayName === "Clickable");
+    const slides = WebpackModules.find(mod => mod.hasOwnProperty("Slides"));
+    const textInput = WebpackModules.find(mod => mod.default?.displayName === "TextInput");
+    const buttonLookStyles = BdApi.findModuleByProps("lookLink");
+    const justifyStyles = BdApi.findModuleByProps("justifyBetween");
+    const colorStyles = BdApi.findModuleByProps("colorPrimary");
+
     class UploadCompleteModal extends React.Component {
         constructor(props) {
             super(props);
@@ -45,12 +56,12 @@ module.exports = (Plugin, Library) => {
     function MainMenu(props) {
         return (
             <div className="mainMenu">
-                <SwitchButton title="Download" onClick={() => { props.onClick(0); }}>
+                <SwitchButton title="Import" onClick={() => { props.onClick(0); }}>
                     <svg fill="currentColor" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
                         <g><rect/></g><g><path d="M5,20h14v-2H5V20z M19,9h-4V3H9v6H5l7,7L19,9z"/></g>
                     </svg>
                 </SwitchButton>
-                <SwitchButton title="Upload" onClick={() => { props.onClick(2); }}>
+                <SwitchButton title="Export" onClick={() => { props.onClick(2); }}>
                     <svg fill="currentColor" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
                         <g><rect/></g><g><path d="M5,20h14v-2H5V20z M5,10h4v6h6v-6h4l-7-7L5,10z"/></g>
                     </svg>
@@ -59,9 +70,11 @@ module.exports = (Plugin, Library) => {
         );
     }
 
-    class UploadMenu extends React.Component {
+    class ExportMenu extends React.Component {
         constructor(props) {
             super(props);
+            this.canClose = props.setCanClose;
+            this.setCanClose = this.setCanClose.bind(this);
             this.onUploadClicked = this.onUploadClicked.bind(this);
             this.state = {
                 isUploading: false
@@ -72,16 +85,20 @@ module.exports = (Plugin, Library) => {
             this.setState({isUploading: true});
         }
 
+        setCanClose(can: boolean) {
+            this.setCanClose(can);
+        }
+
         renderUploadReady(listItems: Array<any>) {
             return (
                 <div className="uploadReady">
-                    <p className="uploadHeader">Upload Manifest:</p>
+                    <p className="uploadHeader">Export Manifest:</p>
                     <ul>
                         {...listItems}
                     </ul>
 
                     <p class="uploadHeaderNotTop">Password (Optional):</p>
-                    <input type="password" className="uploadPassword"/>
+                    {React.createElement(textInput.default, {maxLength: 999, onChange: val => { this.setState(old => { old["password"] = val; }) }, type: "password"})}
                 </div>
             );
         }
@@ -117,7 +134,7 @@ module.exports = (Plugin, Library) => {
         }
     }
 
-    class DownloadMenu extends React.Component {
+    class ImportMenu extends React.Component {
         constructor(props) {
             super(props);
         }
@@ -131,33 +148,69 @@ module.exports = (Plugin, Library) => {
         }
     }
 
+    let canCloseModal: boolean = true;
+
     class MenuModal extends React.Component {
         constructor(props) {
             super(props);
-            this.slidesMod = props.slidesMod;
+            this.props = props;
             this.state = {activeSlide: 1};
             this.onMenuChange = this.onMenuChange.bind(this);
         }
 
-        onMenuChange(target) {
+        onMenuChange(target: number) {
             this.setState({activeSlide: target});
         }
 
-        render() {
-            Logger.log(this.slidesMod);
-            return React.createElement(this.slidesMod, {
+        setCanClose(can: boolean) {
+            canCloseModal = can;
+        }
+
+        renderMainArea() {
+            return (<div className="slides">{React.createElement(slides.Slides, {
                 activeSlide: this.state.activeSlide, 
                 springConfig: {clamp: true, friction: 20, tension: 210},
                 width: 400
             },[
-                <div id={0} children={<DownloadMenu/>}/>,
+                <div id={0} children={<ImportMenu setCanClose={this.setCanClose}/>}/>,
                 <div id={1} children={<MainMenu onClick={this.onMenuChange}/>}/>,
-                <div id={2} children={<UploadMenu/>}/>
-            ]);
+                <div id={2} children={<ExportMenu setCanClose={this.setCanClose}/>}/>
+            ])}</div>);
+        }
+
+        createButton(props: object, name: string) {
+            return React.createElement(Button, {...props}, name);
+        }
+
+        render() {
+            const shouldShowButtons = this.state.activeSlide != 1;
+            return React.createElement(ModalRoot, this.props, [
+                React.createElement(ModalHeader, {separator: false, className: "modalTitle"}, "SettingsSync"),
+                React.createElement(ModalContent, null, [
+                    this.renderMainArea()
+                ]),
+                React.createElement(ModalFooter, {className: shouldShowButtons ? "" : "customFooter", justify: justifyStyles.justifyBetween}, !shouldShowButtons ? [] : [
+                    <div className="mainMenu">
+                        {...[this.createButton({className: "buttonPaddingRight"}, "Export ZIP"),
+                        this.createButton({}, "Upload")]}
+                    </div>,
+                    this.createButton({
+                        onClick: () => { ModalActions.closeModal("SettingsSync"); }, 
+                        look: buttonLookStyles.lookLink,  
+                        color: colorStyles.colorPrimary
+                    }, "Cancel")
+                ])
+            ])
         }
     }
 
-    const SyncIconButton = () => {
+    function attemptModalClose() {
+        if (canCloseModal) {
+            ModalActions.closeModal("SettingsSync");
+        }
+    }
+
+    function SyncIconButton() {
         return (
             <svg x="0" y="0" aria-hidden="false" width="24" height="24" viewBox="0 0 24 24" class="icon">
                 <path fill="currentColor" d="M21.5,14.98c-0.02,0-0.03,0-0.05,0.01C21.2,13.3,19.76,12,18,12c-1.4,0-2.6,0.83-3.16,2.02C13.26,14.1,12,15.4,12,17 c0,1.66,1.34,3,3,3l6.5-0.02c1.38,0,2.5-1.12,2.5-2.5S22.88,14.98,21.5,14.98z M10,4.26v2.09C7.67,7.18,6,9.39,6,12 c0,1.77,0.78,3.34,2,4.44V14h2v6H4v-2h2.73C5.06,16.54,4,14.4,4,12C4,8.27,6.55,5.15,10,4.26z M20,6h-2.73 c1.43,1.26,2.41,3.01,2.66,5l-2.02,0C17.68,9.64,16.98,8.45,16,7.56V10h-2V4h6V6z"/>
@@ -243,14 +296,11 @@ module.exports = (Plugin, Library) => {
 
     class SettingsSync extends Plugin {
         onStart() {
-            this.headerBar = WebpackModules.find(mod => mod.default?.displayName === "HeaderBarContainer");
-            this.clickable = WebpackModules.find(mod => mod.default?.displayName === "Clickable");
-            this.slides = WebpackModules.find(mod => mod.hasOwnProperty("Slides"));
-
+            Logger.log(buttonLookStyles);
             reloadSettings();
 
-            Patcher.after(this.headerBar.default.prototype, "renderLoggedIn", (_, [arg], ret) => {
-                ret.props.toolbar.props.children.push(React.createElement(this.clickable.default, {
+            Patcher.after(headerBar.default.prototype, "renderLoggedIn", (_, [arg], ret) => {
+                ret.props.toolbar.props.children.push(React.createElement(clickable.default, {
                     "aria-label": "SettingsSync", 
                     className: `iconWrapper clickable`,
                     onClick: this.openSyncModal.bind(this),
@@ -344,6 +394,24 @@ module.exports = (Plugin, Library) => {
                     font-weight: bold;
                     margin: 10px 0 5px 0;
                 }
+
+                .customFooter {
+                    height: 32px;
+                }
+
+                .slides {
+                    padding-bottom: 16px;
+                }
+
+                .buttonPaddingRight {
+                    margin-right: 8px;
+                }
+
+                .modalTitle {
+                    color: var(--text-normal);
+                    font-size: x-large;
+                    font-weight: bold;
+                }
             `);
         };
 
@@ -351,7 +419,8 @@ module.exports = (Plugin, Library) => {
             /*DiscordModules.ModalActions.openModal(props => {
                 return <MenuModal slidesMod={this.slides.Slides}/>
             });*/
-            Modals.showModal("SettingsSync Menu", <MenuModal slidesMod={this.slides.Slides}/>, {cancelText: "Cancel", confirmText: null});
+            ModalActions.openModal(props => <MenuModal {...props}/>, {onCloseRequest: attemptModalClose, modalKey: "SettingsSync"})
+            // Modals.showModal("SettingsSync Menu", <MenuModal/>, {cancelText: "Cancel", confirmText: null});
         }
 
         onStop() {

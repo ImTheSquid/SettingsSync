@@ -52,7 +52,23 @@ module.exports = (() => {
         stop() {}
     } : (([Plugin, Api]) => {
         const plugin = (Plugin, Library) => {
+var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key2, value) => key2 in obj ? __defProp(obj, key2, { enumerable: true, configurable: true, writable: true, value }) : obj[key2] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
@@ -18367,6 +18383,25 @@ var require_glob = __commonJS({
   const { Logger, Patcher, WebpackModules, Settings, DiscordModules, Modals, DiscordClassModules, PluginUtilities } = Library;
   const { SettingPanel, Switch } = Settings;
   const { React } = BdApi;
+  const { ModalRoot, ModalHeader, ModalContent, ModalFooter } = BdApi.findModuleByProps("ModalRoot");
+  const Button = BdApi.findModuleByProps("BorderColors");
+  const ModalActions = BdApi.findModuleByProps("openModal", "useModalsStore");
+  const headerBar = WebpackModules.find((mod) => {
+    var _a;
+    return ((_a = mod.default) == null ? void 0 : _a.displayName) === "HeaderBarContainer";
+  });
+  const clickable = WebpackModules.find((mod) => {
+    var _a;
+    return ((_a = mod.default) == null ? void 0 : _a.displayName) === "Clickable";
+  });
+  const slides = WebpackModules.find((mod) => mod.hasOwnProperty("Slides"));
+  const textInput = WebpackModules.find((mod) => {
+    var _a;
+    return ((_a = mod.default) == null ? void 0 : _a.displayName) === "TextInput";
+  });
+  const buttonLookStyles = BdApi.findModuleByProps("lookLink");
+  const justifyStyles = BdApi.findModuleByProps("justifyBetween");
+  const colorStyles = BdApi.findModuleByProps("colorPrimary");
   class UploadCompleteModal extends React.Component {
     constructor(props) {
       super(props);
@@ -18399,7 +18434,7 @@ var require_glob = __commonJS({
     return /* @__PURE__ */ React.createElement("div", {
       className: "mainMenu"
     }, /* @__PURE__ */ React.createElement(SwitchButton, {
-      title: "Download",
+      title: "Import",
       onClick: () => {
         props.onClick(0);
       }
@@ -18410,7 +18445,7 @@ var require_glob = __commonJS({
     }, /* @__PURE__ */ React.createElement("g", null, /* @__PURE__ */ React.createElement("rect", null)), /* @__PURE__ */ React.createElement("g", null, /* @__PURE__ */ React.createElement("path", {
       d: "M5,20h14v-2H5V20z M19,9h-4V3H9v6H5l7,7L19,9z"
     })))), /* @__PURE__ */ React.createElement(SwitchButton, {
-      title: "Upload",
+      title: "Export",
       onClick: () => {
         props.onClick(2);
       }
@@ -18422,9 +18457,11 @@ var require_glob = __commonJS({
       d: "M5,20h14v-2H5V20z M5,10h4v6h6v-6h4l-7-7L5,10z"
     })))));
   }
-  class UploadMenu extends React.Component {
+  class ExportMenu extends React.Component {
     constructor(props) {
       super(props);
+      this.canClose = props.setCanClose;
+      this.setCanClose = this.setCanClose.bind(this);
       this.onUploadClicked = this.onUploadClicked.bind(this);
       this.state = {
         isUploading: false
@@ -18433,17 +18470,21 @@ var require_glob = __commonJS({
     onUploadClicked() {
       this.setState({ isUploading: true });
     }
+    setCanClose(can) {
+      this.setCanClose(can);
+    }
     renderUploadReady(listItems) {
       return /* @__PURE__ */ React.createElement("div", {
         className: "uploadReady"
       }, /* @__PURE__ */ React.createElement("p", {
         className: "uploadHeader"
-      }, "Upload Manifest:"), /* @__PURE__ */ React.createElement("ul", null, listItems), /* @__PURE__ */ React.createElement("p", {
+      }, "Export Manifest:"), /* @__PURE__ */ React.createElement("ul", null, listItems), /* @__PURE__ */ React.createElement("p", {
         class: "uploadHeaderNotTop"
-      }, "Password (Optional):"), /* @__PURE__ */ React.createElement("input", {
-        type: "password",
-        className: "uploadPassword"
-      }));
+      }, "Password (Optional):"), React.createElement(textInput.default, { maxLength: 999, onChange: (val) => {
+        this.setState((old) => {
+          old["password"] = val;
+        });
+      }, type: "password" }));
     }
     renderCantUpload() {
       return /* @__PURE__ */ React.createElement("p", {
@@ -18467,7 +18508,7 @@ var require_glob = __commonJS({
       return /* @__PURE__ */ React.createElement("div", null, listItems.length > 0 && this.renderUploadReady(listItems), listItems.length == 0 && this.renderCantUpload());
     }
   }
-  class DownloadMenu extends React.Component {
+  class ImportMenu extends React.Component {
     constructor(props) {
       super(props);
     }
@@ -18475,26 +18516,33 @@ var require_glob = __commonJS({
       return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", null, "DOWNLOAD"));
     }
   }
+  let canCloseModal = true;
   class MenuModal extends React.Component {
     constructor(props) {
       super(props);
-      this.slidesMod = props.slidesMod;
+      this.props = props;
       this.state = { activeSlide: 1 };
       this.onMenuChange = this.onMenuChange.bind(this);
     }
     onMenuChange(target) {
       this.setState({ activeSlide: target });
     }
-    render() {
-      Logger.log(this.slidesMod);
-      return React.createElement(this.slidesMod, {
+    setCanClose(can) {
+      canCloseModal = can;
+    }
+    renderMainArea() {
+      return /* @__PURE__ */ React.createElement("div", {
+        className: "slides"
+      }, React.createElement(slides.Slides, {
         activeSlide: this.state.activeSlide,
         springConfig: { clamp: true, friction: 20, tension: 210 },
         width: 400
       }, [
         /* @__PURE__ */ React.createElement("div", {
           id: 0,
-          children: /* @__PURE__ */ React.createElement(DownloadMenu, null)
+          children: /* @__PURE__ */ React.createElement(ImportMenu, {
+            setCanClose: this.setCanClose
+          })
         }),
         /* @__PURE__ */ React.createElement("div", {
           id: 1,
@@ -18504,12 +18552,46 @@ var require_glob = __commonJS({
         }),
         /* @__PURE__ */ React.createElement("div", {
           id: 2,
-          children: /* @__PURE__ */ React.createElement(UploadMenu, null)
+          children: /* @__PURE__ */ React.createElement(ExportMenu, {
+            setCanClose: this.setCanClose
+          })
         })
+      ]));
+    }
+    createButton(props, name) {
+      return React.createElement(Button, __spreadValues({}, props), name);
+    }
+    render() {
+      const shouldShowButtons = this.state.activeSlide != 1;
+      return React.createElement(ModalRoot, this.props, [
+        React.createElement(ModalHeader, { separator: false, className: "modalTitle" }, "SettingsSync"),
+        React.createElement(ModalContent, null, [
+          this.renderMainArea()
+        ]),
+        React.createElement(ModalFooter, { className: shouldShowButtons ? "" : "customFooter", justify: justifyStyles.justifyBetween }, !shouldShowButtons ? [] : [
+          /* @__PURE__ */ React.createElement("div", {
+            className: "mainMenu"
+          }, [
+            this.createButton({ className: "buttonPaddingRight" }, "Button"),
+            this.createButton({}, "Button2")
+          ]),
+          this.createButton({
+            onClick: () => {
+              ModalActions.closeModal("SettingsSync");
+            },
+            look: buttonLookStyles.lookLink,
+            color: colorStyles.colorPrimary
+          }, "Cancel")
+        ])
       ]);
     }
   }
-  const SyncIconButton = () => {
+  function attemptModalClose() {
+    if (canCloseModal) {
+      ModalActions.closeModal("SettingsSync");
+    }
+  }
+  function SyncIconButton() {
     return /* @__PURE__ */ React.createElement("svg", {
       x: "0",
       y: "0",
@@ -18522,7 +18604,7 @@ var require_glob = __commonJS({
       fill: "currentColor",
       d: "M21.5,14.98c-0.02,0-0.03,0-0.05,0.01C21.2,13.3,19.76,12,18,12c-1.4,0-2.6,0.83-3.16,2.02C13.26,14.1,12,15.4,12,17 c0,1.66,1.34,3,3,3l6.5-0.02c1.38,0,2.5-1.12,2.5-2.5S22.88,14.98,21.5,14.98z M10,4.26v2.09C7.67,7.18,6,9.39,6,12 c0,1.77,0.78,3.34,2,4.44V14h2v6H4v-2h2.73C5.06,16.54,4,14.4,4,12C4,8.27,6.55,5.15,10,4.26z M20,6h-2.73 c1.43,1.26,2.41,3.01,2.66,5l-2.02,0C17.68,9.64,16.98,8.45,16,7.56V10h-2V4h6V6z"
     }));
-  };
+  }
   const defaultSettings = {
     syncPlugins: true,
     syncPluginSettings: true,
@@ -18575,18 +18657,10 @@ var require_glob = __commonJS({
   }
   class SettingsSync extends Plugin {
     onStart() {
-      this.headerBar = WebpackModules.find((mod) => {
-        var _a;
-        return ((_a = mod.default) == null ? void 0 : _a.displayName) === "HeaderBarContainer";
-      });
-      this.clickable = WebpackModules.find((mod) => {
-        var _a;
-        return ((_a = mod.default) == null ? void 0 : _a.displayName) === "Clickable";
-      });
-      this.slides = WebpackModules.find((mod) => mod.hasOwnProperty("Slides"));
+      Logger.log(buttonLookStyles);
       reloadSettings();
-      Patcher.after(this.headerBar.default.prototype, "renderLoggedIn", (_, [arg2], ret) => {
-        ret.props.toolbar.props.children.push(React.createElement(this.clickable.default, {
+      Patcher.after(headerBar.default.prototype, "renderLoggedIn", (_, [arg2], ret) => {
+        ret.props.toolbar.props.children.push(React.createElement(clickable.default, {
           "aria-label": "SettingsSync",
           className: `iconWrapper clickable`,
           onClick: this.openSyncModal.bind(this),
@@ -18679,12 +18753,28 @@ var require_glob = __commonJS({
                     font-weight: bold;
                     margin: 10px 0 5px 0;
                 }
+
+                .customFooter {
+                    height: 32px;
+                }
+
+                .slides {
+                    padding-bottom: 16px;
+                }
+
+                .buttonPaddingRight {
+                    margin-right: 8px;
+                }
+
+                .modalTitle {
+                    color: var(--text-normal);
+                    font-size: x-large;
+                    font-weight: bold;
+                }
             `);
     }
     openSyncModal() {
-      Modals.showModal("SettingsSync Menu", /* @__PURE__ */ React.createElement(MenuModal, {
-        slidesMod: this.slides.Slides
-      }), { cancelText: "Cancel", confirmText: null });
+      ModalActions.openModal((props) => /* @__PURE__ */ React.createElement(MenuModal, __spreadValues({}, props)), { onCloseRequest: attemptModalClose, modalKey: "SettingsSync" });
     }
     onStop() {
       Patcher.unpatchAll();
