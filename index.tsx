@@ -12,6 +12,10 @@ module.exports = (Plugin, Library) => {
     const clickable = WebpackModules.find(mod => mod.default?.displayName === "Clickable");
     const slides = WebpackModules.find(mod => mod.hasOwnProperty("Slides"));
     const textInput = WebpackModules.find(mod => mod.default?.displayName === "TextInput");
+    const spinner = WebpackModules.find(mod => mod.default?.displayName === "Spinner");
+
+    const master = WebpackModules.getByProps("app", "clipboard", "features", "fileManager");
+
     const buttonLookStyles = BdApi.findModuleByProps("lookLink");
     const justifyStyles = BdApi.findModuleByProps("justifyBetween");
     const colorStyles = BdApi.findModuleByProps("colorPrimary");
@@ -70,82 +74,80 @@ module.exports = (Plugin, Library) => {
         );
     }
 
-    class ExportMenu extends React.Component {
-        constructor(props) {
-            super(props);
-            this.canClose = props.setCanClose;
-            this.setCanClose = this.setCanClose.bind(this);
-            this.onUploadClicked = this.onUploadClicked.bind(this);
-            this.state = {
-                isUploading: false
-            }
-        }
+    function ExportMenuUpload(props) {
+        return (
+            <div className="uploadReady">
+                <p className="uploadHeader">Export Manifest:</p>
+                <ul>
+                    {...props.items}
+                </ul>
 
-        onUploadClicked() {
-            this.setState({isUploading: true});
-        }
+                <p class="uploadHeaderNotTop">Password (Optional):</p>
+                {React.createElement(textInput.default, {maxLength: 999, onChange: val => { props.setPassword(val); }, type: "password", disabled: props.disable})}
 
-        setCanClose(can: boolean) {
-            this.setCanClose(can);
-        }
+                {props.link !== null && (
+                    <div className="topMargin">
+                        <h3>Your plugins, themes, and related settings have now been uploaded to tmp.ninja. To retrieve your files, open SettingsSync settings on your other client and paste in this link:</h3>
+                        <h2 className="clickToHighlight link" onClick={props.handleClick}>
+                            <strong>{props.link}</strong>
+                        </h2>
+                        {props.showCopied &&
+                            <p className="copied">Copied!</p>
+                        }
+                    </div>
+                )}
 
-        renderUploadReady(listItems: Array<any>) {
-            return (
-                <div className="uploadReady">
-                    <p className="uploadHeader">Export Manifest:</p>
-                    <ul>
-                        {...listItems}
-                    </ul>
-
-                    <p class="uploadHeaderNotTop">Password (Optional):</p>
-                    {React.createElement(textInput.default, {maxLength: 999, onChange: val => { this.setState(old => { old["password"] = val; }) }, type: "password"})}
-                </div>
-            );
-        }
-
-        renderCantUpload() {
-            return (
-                <p className="cantUpload">Looks like you don't have anything selected to upload! You can change this in the SettingsSync plugin settings.</p>
-            )
-        }
-
-        render() {
-            let listItems: Array<any> = [];
-
-            if (settings.syncPlugins) {
-                listItems.push(<li>Plugins</li>)
-            }
-            if (settings.syncPluginSettings) {
-                listItems.push(<li>Plugin Settings</li>)
-            }
-            if (settings.syncThemes) {
-                listItems.push(<li>Themes</li>)
-            }
-            if (settings.syncMeta) {
-                listItems.push(<li>BD Metadata</li>)
-            }
-
-            return (
-                <div>
-                    {listItems.length > 0 && this.renderUploadReady(listItems)}
-                    {listItems.length == 0 && this.renderCantUpload()}
-                </div>
-            );
-        }
+                {props.error !== null && (
+                    <p class="uploadHeaderNotTop error">Error: {props.error}</p>
+                )}
+            </div>
+        );
     }
 
-    class ImportMenu extends React.Component {
-        constructor(props) {
-            super(props);
+    function ExportMenuError() {
+        return (
+            <p className="cantUpload">Looks like you don't have anything selected to upload! You can change this in the SettingsSync plugin settings.</p>
+        )
+    }
+
+    function ExportMenu(props) {
+        let listItems: Array<any> = [];
+
+        if (settings.syncPlugins) {
+            listItems.push(<li>Plugins</li>)
+        }
+        if (settings.syncPluginSettings) {
+            listItems.push(<li>Plugin Settings</li>)
+        }
+        if (settings.syncThemes) {
+            listItems.push(<li>Themes</li>)
+        }
+        if (settings.syncMeta) {
+            listItems.push(<li>BD Metadata</li>)
         }
 
-        render() {
-            return (
-                <div >
-                    <p>DOWNLOAD</p>
-                </div>
-            );
-        }
+        return (
+            <div>
+                {listItems.length > 0 && ExportMenuUpload({
+                    items: listItems,
+                    disable: props.disable,
+                    setPassword: props.setPassword,
+                    link: props.link,
+                    error: props.error,
+                    handleClick: props.handleCopyClick,
+                    showCopied: props.copyClicked
+                })}
+                {listItems.length == 0 && ExportMenuError()}
+            </div>
+        );
+    }
+
+    function ImportMenu() {
+        return (
+            <div>
+                <p>IMPORT</p>
+            </div>
+        );
     }
 
     let canCloseModal: boolean = true;
@@ -154,8 +156,20 @@ module.exports = (Plugin, Library) => {
         constructor(props) {
             super(props);
             this.props = props;
-            this.state = {activeSlide: 1};
+            this.state = {
+                activeSlide: 1,
+                password: "",
+                lock: false,
+                error: null,
+                link: null,
+                copyClicked: false
+            };
+
+            // Bindings
             this.onMenuChange = this.onMenuChange.bind(this);
+            this.setCanClose = this.setCanClose.bind(this);
+            this.didSetPassword = this.didSetPassword.bind(this);
+            this.handleCopyClick = this.handleCopyClick.bind(this);
         }
 
         onMenuChange(target: number) {
@@ -166,6 +180,15 @@ module.exports = (Plugin, Library) => {
             canCloseModal = can;
         }
 
+        didSetPassword(password: string) {
+            this.setState({"password": password});
+        }
+
+        handleCopyClick() {
+            require("electron").clipboard.writeText(this.state.link);
+            this.setState({copyClicked: true});
+        }
+
         renderMainArea() {
             return (<div className="slides">{React.createElement(slides.Slides, {
                 activeSlide: this.state.activeSlide, 
@@ -174,7 +197,7 @@ module.exports = (Plugin, Library) => {
             },[
                 <div id={0} children={<ImportMenu setCanClose={this.setCanClose}/>}/>,
                 <div id={1} children={<MainMenu onClick={this.onMenuChange}/>}/>,
-                <div id={2} children={<ExportMenu setCanClose={this.setCanClose}/>}/>
+                <div id={2} children={<ExportMenu setPassword={this.didSetPassword} disable={this.state.lock} link={this.state.link} error={this.state.error} handleCopyClick={this.handleCopyClick} copyClicked={this.state.copyClicked}/>}/>
             ])}</div>);
         }
 
@@ -182,23 +205,54 @@ module.exports = (Plugin, Library) => {
             return React.createElement(Button, {...props}, name);
         }
 
+        getPageButtons() {
+            const pass = this.state.password.length > 0 ? this.state.password : null;
+            return this.state.activeSlide == 0 ? (
+                <div></div>
+            ) : (
+                <div className="mainMenu">
+                    {this.createButton({
+                        className: "buttonPaddingRight",
+                        onClick: () => { exportZIP(pass); },
+                        disabled: this.state.lock
+                    }, "Export ZIP")}
+                    {this.createButton({onClick: () => {
+                        this.setCanClose(false);
+                        this.setState({lock: true, link: null, error: null});
+                        uploadZIP(pass).then(link => {
+                            this.setCanClose(true);
+                            this.setState({lock: false, link: link});
+                        }).catch(err => {
+                            this.setCanClose(true);
+                            this.setState({lock: false, error: err});
+                        })
+                    }, disabled: this.state.lock}, this.state.lock ? React.createElement(spinner.default, {type: spinner.SpinnerTypes.PULSING_ELLIPSIS}, []) : "Upload")}
+                </div>
+            );
+        }
+
         render() {
-            const shouldShowButtons = this.state.activeSlide != 1;
+            const shouldShowButtons = this.state.activeSlide !== 1;
+            let title = "SettingsSync";
+            if (this.state.activeSlide === 0) {
+                title += ": Import";
+            } else if (this.state.activeSlide === 2) {
+                title += ": Export";
+            }
+
             return React.createElement(ModalRoot, this.props, [
-                React.createElement(ModalHeader, {separator: false, className: "modalTitle"}, "SettingsSync"),
+                React.createElement(ModalHeader, {separator: false, className: "modalTitle"}, title),
                 React.createElement(ModalContent, null, [
                     this.renderMainArea()
                 ]),
                 React.createElement(ModalFooter, {className: shouldShowButtons ? "" : "customFooter", justify: justifyStyles.justifyBetween}, !shouldShowButtons ? [] : [
-                    <div className="mainMenu">
-                        {...[this.createButton({className: "buttonPaddingRight"}, "Export ZIP"),
-                        this.createButton({}, "Upload")]}
-                    </div>,
+                    this.getPageButtons(),
                     this.createButton({
                         onClick: () => { ModalActions.closeModal("SettingsSync"); }, 
                         look: buttonLookStyles.lookLink,  
-                        color: colorStyles.colorPrimary
-                    }, "Cancel")
+                        color: colorStyles.colorPrimary,
+                        disabled: this.state.lock
+                    }, "Close")
                 ])
             ])
         }
@@ -240,7 +294,53 @@ module.exports = (Plugin, Library) => {
         settings = PluginUtilities.loadSettings("SettingsSync", defaultSettings);
     };
 
-    async function compressBD(password?: string): Promise<string> {
+    function exportZIP(password?: string) {
+        const bytes = compressBD(password);
+        master.fileManager.saveWithDialog(bytes, "bdSettings.zip");
+    }
+
+    async function uploadZIP(password?: string): Promise<string> {
+        const bytes = compressBD(password);
+
+        // Upload file to tmp.ninja and get response
+        const FormData = require("form-data");
+        const form = new FormData();
+        form.append("files[]", Buffer.from(bytes).toString("base64"), "bdSettings.zip");
+
+        const options = {
+            hostname: "tmp.ninja",
+            port: 443,
+            path: "/upload.php",
+            method: "POST",
+            headers: form.getHeaders()
+        };
+
+        return new Promise((resolve, reject) => {
+            let data: string = "";
+            const req = require("https").request(options, res => {
+                res.setEncoding("utf-8");
+                res.on("data", chunk => {
+                    data += chunk;
+                })
+                res.on("end", () => {
+                    const json = JSON.parse(data);
+                    if (!json.success) {
+                        reject(`${json.errorcode}: ${json.description}`);
+                        return;
+                    }
+                    resolve(json.files[0].url);
+                })
+            }).on("err", err => {
+                reject(err);
+            });
+
+            req.write(form.getBuffer());
+            req.end();
+        });
+    }
+
+    // Returns compressed file bytes
+    function compressBD(password?: string): Uint8Array {
         const Minizip = require('minizip-asm.js');
         const glob = require("glob");
         const path = require("path");
@@ -282,21 +382,11 @@ module.exports = (Plugin, Library) => {
             }
         }
 
-        // Write to temporary file
-        const fs = require("fs");
-        const id = require("crypto").randomBytes(16).toString("hex");
-        const tempFolder = await fs.mkdtemp(path.join(require("os").tmpdir(), `ss-upload-${id}`));
-
-        await fs.writeFile(path.join(tempFolder, "upload.zip"), zipFile.zip());
-
-        // Upload file to tmp.ninja and get response
-
-        return "";
+        return zipFile.zip();
     }
 
     class SettingsSync extends Plugin {
         onStart() {
-            Logger.log(buttonLookStyles);
             reloadSettings();
 
             Patcher.after(headerBar.default.prototype, "renderLoggedIn", (_, [arg], ret) => {
@@ -411,6 +501,14 @@ module.exports = (Plugin, Library) => {
                     color: var(--text-normal);
                     font-size: x-large;
                     font-weight: bold;
+                }
+
+                .error {
+                    color: var(--info-danger-foreground);
+                }
+
+                .topMargin {
+                    margin: 10px 0 5px 0;
                 }
             `);
         };
