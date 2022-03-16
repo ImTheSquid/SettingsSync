@@ -12,41 +12,12 @@ module.exports = (Plugin, Library) => {
     const clickable = WebpackModules.find(mod => mod.default?.displayName === "Clickable");
     const slides = WebpackModules.find(mod => mod.hasOwnProperty("Slides"));
     const textInput = WebpackModules.find(mod => mod.default?.displayName === "TextInput");
-    const spinner = WebpackModules.find(mod => mod.default?.displayName === "Spinner");
 
     const master = WebpackModules.getByProps("app", "clipboard", "features", "fileManager");
 
     const buttonLookStyles = BdApi.findModuleByProps("lookLink");
     const justifyStyles = BdApi.findModuleByProps("justifyBetween");
     const colorStyles = BdApi.findModuleByProps("colorPrimary");
-
-    class UploadCompleteModal extends React.Component {
-        constructor(props) {
-            super(props);
-            this.state = {link: props.link, showCopied: false};
-            this.handleClick = this.handleClick.bind(this);
-        }
-
-        handleClick(e) {
-            e.preventDefault();
-            require("electron").clipboard.writeText(this.state.link);
-            this.setState(oldState => oldState["showCopied"] = true);
-        }
-
-        render() {
-            return (
-            <div className={DiscordClassModules.Titles.defaultColor}>
-                <h3>Your plugins, themes, and related settings have now been uploaded to tmp.ninja. To retrieve your files, open SettingsSync settings on your other client and paste in this link:</h3>
-                <h2 className="clickToHighlight link" onClick={this.handleClick}>
-                    <strong>{this.state.link}</strong>
-                </h2>
-                {this.state.showCopied &&
-                    <p className="copied">Copied!</p>
-                }
-            </div>
-            );
-        }
-    }
 
     function SwitchButton(props) {
         return (
@@ -85,6 +56,10 @@ module.exports = (Plugin, Library) => {
                 <p class="uploadHeaderNotTop">Password (Optional):</p>
                 {React.createElement(textInput.default, {maxLength: 999, onChange: val => { props.setPassword(val); }, type: "password", disabled: props.disable})}
 
+                {props.disable && (
+                    <p className="topMargin">Uploading ZIP, this may take a while...</p>
+                )}
+
                 {props.link !== null && (
                     <div className="topMargin">
                         <h3>Your plugins, themes, and related settings have now been uploaded to tmp.ninja. To retrieve your files, open SettingsSync settings on your other client and paste in this link:</h3>
@@ -98,7 +73,7 @@ module.exports = (Plugin, Library) => {
                 )}
 
                 {props.error !== null && (
-                    <p class="uploadHeaderNotTop error">Error: {props.error}</p>
+                    <p class="topMargin error"><strong>Error:</strong> {props.error}</p>
                 )}
             </div>
         );
@@ -142,15 +117,74 @@ module.exports = (Plugin, Library) => {
         );
     }
 
-    function ImportMenu() {
+    function ImportMenu(props) {
         return (
-            <div>
-                <p>IMPORT</p>
+            <div className="uploadReady">
+                <p className="uploadHeader">Import Type:</p>
+                {React.createElement(DiscordModules.Dropdown, {
+                    onChange: val => { props.onImportTypeChange(val); },
+                    options: [
+                        {
+                            label: "Import from Link",
+                            value: "link"
+                        },
+                        {
+                            label: "Import from Local ZIP",
+                            value: "local"
+                        }
+                    ],
+                    value: props.importValue
+                }, [])}
+
+                {props.importValue === "link" && (<div>
+                    <p class="uploadHeaderNotTop">Link:</p>
+                    {React.createElement(textInput.default, {maxLength: 999, onChange: val => { props.setImportLink(val); }, disabled: props.disable})}
+                </div>)}
+
+                {props.importValue === "local" && (<div>
+                    <p class="uploadHeaderNotTop">ZIP File:</p>
+                    {React.createElement(Button, {
+                        onClick: () => { props.getZIP(); }, 
+                        color: colorStyles.colorPrimary,
+                    }, "Select...")}
+                    {props.importPath.length > 0 && (
+                        <p><strong>Path:</strong> {props.importPath}</p>
+                    )}
+                </div>)}
+
+                <p className="cantUpload"><strong>WARNING:</strong> Only import from sources you trust!</p>
+
+                <p class="uploadHeaderNotTop">Password if Encrypted:</p>
+                {React.createElement(textInput.default, {maxLength: 999, onChange: val => { props.setPassword(val); }, type: "password", disabled: props.disable})}
+
+                {settings.overwrite && (
+                    <p class="cantUpload"><strong>WARNING:</strong> Overwrite mode enabled, all selected data types will be overwritten on import!</p>
+                )}
+
+                {props.error !== null && (
+                    <p class="topMargin error"><strong>Error:</strong> {props.error}</p>
+                )}
             </div>
         );
     }
 
     let canCloseModal: boolean = true;
+
+    function urlIsValid(urlString: string): boolean {
+        if (!urlString.startsWith("http")) {
+            urlString = `https://${urlString}`;
+        }
+
+        let url;
+  
+        try {
+            url = new URL(urlString);
+        } catch (_) {
+            return false;  
+        }
+
+        return url.protocol === "https:";
+    }
 
     class MenuModal extends React.Component {
         constructor(props) {
@@ -162,14 +196,19 @@ module.exports = (Plugin, Library) => {
                 lock: false,
                 error: null,
                 link: null,
-                copyClicked: false
+                copyClicked: false,
+                importPath: "",
+                importValue: "link"
             };
 
             // Bindings
             this.onMenuChange = this.onMenuChange.bind(this);
             this.setCanClose = this.setCanClose.bind(this);
             this.didSetPassword = this.didSetPassword.bind(this);
+            this.didSetLink = this.didSetLink.bind(this);
             this.handleCopyClick = this.handleCopyClick.bind(this);
+            this.handleImportTypeChange = this.handleImportTypeChange.bind(this);
+            this.getZIP = this.getZIP.bind(this);
         }
 
         onMenuChange(target: number) {
@@ -184,9 +223,26 @@ module.exports = (Plugin, Library) => {
             this.setState({"password": password});
         }
 
+        didSetLink(link: string) {
+            this.setState({importPath: link, error: null});
+        }
+
         handleCopyClick() {
             require("electron").clipboard.writeText(this.state.link);
             this.setState({copyClicked: true});
+        }
+
+        handleImportTypeChange(val: string) {
+            this.setState({importPath: "", importValue: val, error: null});
+        }
+
+        getZIP() {
+            openZIP().then(path => {
+                this.didSetLink(path);
+                this.setState({error: null});
+            }).catch(err => {
+                this.setState({error: err});
+            });
         }
 
         renderMainArea() {
@@ -195,7 +251,7 @@ module.exports = (Plugin, Library) => {
                 springConfig: {clamp: true, friction: 20, tension: 210},
                 width: 400
             },[
-                <div id={0} children={<ImportMenu setCanClose={this.setCanClose}/>}/>,
+                <div id={0} children={<ImportMenu setPassword={this.didSetPassword} onImportTypeChange={this.handleImportTypeChange} setImportLink={this.didSetLink} getZIP={this.getZIP} importValue={this.state.importValue} importPath={this.state.importPath} error={this.state.error}/>}/>,
                 <div id={1} children={<MainMenu onClick={this.onMenuChange}/>}/>,
                 <div id={2} children={<ExportMenu setPassword={this.didSetPassword} disable={this.state.lock} link={this.state.link} error={this.state.error} handleCopyClick={this.handleCopyClick} copyClicked={this.state.copyClicked}/>}/>
             ])}</div>);
@@ -208,7 +264,16 @@ module.exports = (Plugin, Library) => {
         getPageButtons() {
             const pass = this.state.password.length > 0 ? this.state.password : null;
             return this.state.activeSlide == 0 ? (
-                <div></div>
+                <div>
+                    {this.createButton({
+                        onClick: () => {
+                            importZIP(this.state.importPath, pass).catch(err => {
+                                this.setState({error: err});
+                            });
+                        },
+                        disabled: !(urlIsValid(this.state.importPath) || (this.state.importValue == "local" && this.state.importPath.length > 0))
+                    }, "Import")}
+                </div>
             ) : (
                 <div className="mainMenu">
                     {this.createButton({
@@ -226,7 +291,7 @@ module.exports = (Plugin, Library) => {
                             this.setCanClose(true);
                             this.setState({lock: false, error: err});
                         })
-                    }, disabled: this.state.lock}, this.state.lock ? React.createElement(spinner.default, {type: spinner.SpinnerTypes.PULSING_ELLIPSIS}, []) : "Upload")}
+                    }, disabled: this.state.lock}, this.state.lock ? React.createElement(DiscordModules.Spinner, {type: DiscordModules.Spinner.Type.PULSING_ELLIPSIS}, []) : "Upload")}
                 </div>
             );
         }
@@ -294,18 +359,49 @@ module.exports = (Plugin, Library) => {
         settings = PluginUtilities.loadSettings("SettingsSync", defaultSettings);
     };
 
-    function exportZIP(password?: string) {
+    async function openZIP(): Promise<string> {
+        const res = await master.fileManager.showOpenDialog({
+            title: "Import BD Settings...",
+            filters: [
+                {name: "BD Files", extensions: ["zip"]}
+            ],
+            properties: [
+                "openFile"
+            ],
+            buttonLabel: "Import"
+        })
+
+        if (res.length == 0) {
+            return "";
+        }
+        
+        return res[0];
+    }
+
+    async function importZIP(path: string, password?: string) {
+        const Minizip = require('minizip-asm.js');
+        let zipFile = new Minizip(await require("fs/promises").readFile(path));
+
+        if (password == null && zipFile.list().some(file => file.crypt)) { // TODO: Check that password is correct
+            throw "No password supplied for encrypted ZIP file";
+        }
+
+        Logger.log(zipFile.list());
+    }
+
+    async function exportZIP(password?: string) {
         const bytes = compressBD(password);
         master.fileManager.saveWithDialog(bytes, "bdSettings.zip");
     }
 
     async function uploadZIP(password?: string): Promise<string> {
         const bytes = compressBD(password);
+        const hash = require("crypto").createHash("sha1").update(bytes).digest("hex");
 
         // Upload file to tmp.ninja and get response
         const FormData = require("form-data");
         const form = new FormData();
-        form.append("files[]", Buffer.from(bytes).toString("base64"), "bdSettings.zip");
+        form.append("files[]", Buffer.from(bytes), "bdSettings.zip");
 
         const options = {
             hostname: "tmp.ninja",
@@ -327,6 +423,9 @@ module.exports = (Plugin, Library) => {
                     if (!json.success) {
                         reject(`${json.errorcode}: ${json.description}`);
                         return;
+                    }
+                    if (hash !== json.files[0].hash) {
+                        reject(`Hash Mismatch: Original: ${hash} Uploaded: ${json.files[0].hash}`);
                     }
                     resolve(json.files[0].url);
                 })
@@ -390,12 +489,14 @@ module.exports = (Plugin, Library) => {
             reloadSettings();
 
             Patcher.after(headerBar.default.prototype, "renderLoggedIn", (_, [arg], ret) => {
-                ret.props.toolbar.props.children.push(React.createElement(clickable.default, {
-                    "aria-label": "SettingsSync", 
-                    className: `iconWrapper clickable`,
-                    onClick: this.openSyncModal.bind(this),
-                    role: "button"
-                }, [<SyncIconButton/>]));
+                ret.props.toolbar.props.children.push(React.createElement(DiscordModules.Tooltip, {text: "SettingsSync", position: "left"}, [
+                    React.createElement(clickable.default, {
+                        "aria-label": "SettingsSync", 
+                        className: "iconWrapper clickable",
+                        onClick: this.openSyncModal.bind(this),
+                        role: "button"
+                    }, [<SyncIconButton/>])
+                ]));
             });
 
             BdApi.injectCSS("SettingsSync", `
@@ -530,11 +631,11 @@ module.exports = (Plugin, Library) => {
             reloadSettings();
 
             return new SettingPanel(() => { PluginUtilities.saveSettings("SettingsSync", settings); },
-                new Switch("Sync Plugins", "Include plugins in synchronization.", settings.syncPlugins, on => { settings.syncPlugins = on; }),
-                new Switch("Sync Plugins Settings", "Include plugin settings in synchronization.", settings.syncPluginSettings, on => { settings.syncPluginSettings = on; }),
-                new Switch("Sync Themes", "Include themes in synchronization.", settings.syncThemes, on => { settings.syncThemes = on; }),
-                new Switch("Sync Meta", "Include BetterDiscord configuration files in synchronziation. This includes which plugins and themes are enabled as well as everything under the Settings, Emotes, Custom CSS and other tabs.", settings.syncMeta, on => { settings.syncMeta = on; }),
-                new Switch("Overwrite Data", "Overwrite local data on sync. Always on for files synced under Sync Meta.", settings.overwrite, on => { settings.overwrite = on; })
+                new Switch("Sync Plugins", "Include plugins in import/export.", settings.syncPlugins, on => { settings.syncPlugins = on; }),
+                new Switch("Sync Plugins Settings", "Include plugin settings in import/export.", settings.syncPluginSettings, on => { settings.syncPluginSettings = on; }),
+                new Switch("Sync Themes", "Include themes in import/export.", settings.syncThemes, on => { settings.syncThemes = on; }),
+                new Switch("Sync Meta", "Include BetterDiscord configuration files in import/export. This includes which plugins and themes are enabled as well as everything under the Settings, Emotes, Custom CSS and other tabs.", settings.syncMeta, on => { settings.syncMeta = on; }),
+                new Switch("Overwrite Data", "Overwrite local data on sync. Files synced under Sync Meta are always overwritten if they are enabled.", settings.overwrite, on => { settings.overwrite = on; })
             ).getElement();
         }
     };
