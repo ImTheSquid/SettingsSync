@@ -28242,7 +28242,6 @@ var require_glob = __commonJS({
   }
   class SettingsSync extends Plugin {
     onStart() {
-      Logger.log(master);
       reloadSettings();
       Patcher.after(headerBar.default.prototype, "renderLoggedIn", (_, [arg2], ret) => {
         ret.props.toolbar.props.children.push(React.createElement(DiscordModules.Tooltip, { text: "SettingsSync", position: "left" }, [
