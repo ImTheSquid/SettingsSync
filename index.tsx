@@ -1,7 +1,7 @@
 module.exports = (Plugin, Library) => {
     "use strict";
 
-    const {Logger, Patcher, WebpackModules, Settings, DiscordModules, Modals, DiscordClassModules, PluginUtilities} = Library;
+    const {Patcher, WebpackModules, Settings, DiscordModules, PluginUtilities} = Library;
     const {SettingPanel, Switch} = Settings;
     const {React} = BdApi;
 
@@ -13,11 +13,12 @@ module.exports = (Plugin, Library) => {
     const slides = WebpackModules.find(mod => mod.hasOwnProperty("Slides"));
     const textInput = WebpackModules.find(mod => mod.default?.displayName === "TextInput");
 
-    const master = WebpackModules.getByProps("app", "clipboard", "features", "fileManager");
-
     const buttonLookStyles = BdApi.findModuleByProps("lookLink");
     const justifyStyles = BdApi.findModuleByProps("justifyBetween");
     const colorStyles = BdApi.findModuleByProps("colorPrimary");
+
+    // Used to make sure the correct BD settings folder is selected
+    const releaseChannel = DiscordNative.remoteApp.getReleaseChannel();
 
     function SwitchButton(props) {
         return (
@@ -45,19 +46,44 @@ module.exports = (Plugin, Library) => {
         );
     }
 
+    function hasAnyCategoryEnabled(): boolean {
+        return settings.syncMeta || settings.syncPluginSettings || settings.syncPlugins || settings.syncThemes;
+    }
+
+    function EnabledCategories() {
+        let listItems: Array<any> = [];
+
+        if (settings.syncPlugins) {
+            listItems.push(<li>Plugins</li>)
+        }
+        if (settings.syncPluginSettings) {
+            listItems.push(<li>Plugin Settings</li>)
+        }
+        if (settings.syncThemes) {
+            listItems.push(<li>Themes</li>)
+        }
+        if (settings.syncMeta) {
+            listItems.push(<li>BD Metadata</li>)
+        }
+
+        return (
+            <ul>
+                {listItems}
+            </ul>
+        );
+    }
+
     function ExportMenuUpload(props) {
         return (
             <div className="uploadReady">
                 <p className="uploadHeader">Export Manifest:</p>
-                <ul>
-                    {...props.items}
-                </ul>
+                <EnabledCategories/>
 
                 <p class="uploadHeaderNotTop">Password (Optional):</p>
                 {React.createElement(textInput.default, {maxLength: 999, onChange: val => { props.setPassword(val); }, type: "password", disabled: props.disable})}
 
                 {props.disable && (
-                    <p className="topMargin">Uploading ZIP, this may take a while...</p>
+                    <p className="topMargin">Uploading ZIP, this may take a few minutes...</p>
                 )}
 
                 {props.link !== null && (
@@ -79,32 +105,16 @@ module.exports = (Plugin, Library) => {
         );
     }
 
-    function ExportMenuError() {
+    function MenuCategoryError(action: string) {
         return (
-            <p className="cantUpload">Looks like you don't have anything selected to upload! You can change this in the SettingsSync plugin settings.</p>
+            <p className="cantUpload">Looks like you don't have any categories selected to {action}! You can change this in the SettingsSync plugin settings.</p>
         )
     }
 
     function ExportMenu(props) {
-        let listItems: Array<any> = [];
-
-        if (settings.syncPlugins) {
-            listItems.push(<li>Plugins</li>)
-        }
-        if (settings.syncPluginSettings) {
-            listItems.push(<li>Plugin Settings</li>)
-        }
-        if (settings.syncThemes) {
-            listItems.push(<li>Themes</li>)
-        }
-        if (settings.syncMeta) {
-            listItems.push(<li>BD Metadata</li>)
-        }
-
         return (
             <div>
-                {listItems.length > 0 && ExportMenuUpload({
-                    items: listItems,
+                {hasAnyCategoryEnabled() && ExportMenuUpload({
                     disable: props.disable,
                     setPassword: props.setPassword,
                     link: props.link,
@@ -112,12 +122,12 @@ module.exports = (Plugin, Library) => {
                     handleClick: props.handleCopyClick,
                     showCopied: props.copyClicked
                 })}
-                {listItems.length == 0 && ExportMenuError()}
+                {!hasAnyCategoryEnabled() && MenuCategoryError("export")}
             </div>
         );
     }
 
-    function ImportMenu(props) {
+    function ImportMenuMain(props) {
         return (
             <div className="uploadReady">
                 <p className="uploadHeader">Import Type:</p>
@@ -146,6 +156,7 @@ module.exports = (Plugin, Library) => {
                     {React.createElement(Button, {
                         onClick: () => { props.getZIP(); }, 
                         color: colorStyles.colorPrimary,
+                        disabled: props.disable
                     }, "Select...")}
                     {props.importPath.length > 0 && (
                         <p><strong>Path:</strong> {props.importPath}</p>
@@ -157,13 +168,25 @@ module.exports = (Plugin, Library) => {
                 <p class="uploadHeaderNotTop">Password if Encrypted:</p>
                 {React.createElement(textInput.default, {maxLength: 999, onChange: val => { props.setPassword(val); }, type: "password", disabled: props.disable})}
 
+                <p className="uploadHeaderNotTop">Import Manifest:</p>
+                <EnabledCategories/>
+
                 {settings.overwrite && (
-                    <p class="cantUpload"><strong>WARNING:</strong> Overwrite mode enabled, all selected data types will be overwritten on import!</p>
+                    <p class="cantUpload"><strong>WARNING:</strong> Overwrite mode enabled, all import categories listed above will be overwritten on import!</p>
                 )}
 
                 {props.error !== null && (
                     <p class="topMargin error"><strong>Error:</strong> {props.error}</p>
                 )}
+            </div>
+        );
+    }
+
+    function ImportMenu(props) {
+        return (
+            <div>
+                {hasAnyCategoryEnabled() && ImportMenuMain(props)}
+                {!hasAnyCategoryEnabled() && MenuCategoryError("import")}
             </div>
         );
     }
@@ -233,6 +256,9 @@ module.exports = (Plugin, Library) => {
         }
 
         handleImportTypeChange(val: string) {
+            if (this.state.lock) {
+                return;
+            }
             this.setState({importPath: "", importValue: val, error: null});
         }
 
@@ -251,7 +277,7 @@ module.exports = (Plugin, Library) => {
                 springConfig: {clamp: true, friction: 20, tension: 210},
                 width: 400
             },[
-                <div id={0} children={<ImportMenu setPassword={this.didSetPassword} onImportTypeChange={this.handleImportTypeChange} setImportLink={this.didSetLink} getZIP={this.getZIP} importValue={this.state.importValue} importPath={this.state.importPath} error={this.state.error}/>}/>,
+                <div id={0} children={<ImportMenu setPassword={this.didSetPassword} onImportTypeChange={this.handleImportTypeChange} setImportLink={this.didSetLink} getZIP={this.getZIP} importValue={this.state.importValue} importPath={this.state.importPath} error={this.state.error} disable={this.state.lock}/>}/>,
                 <div id={1} children={<MainMenu onClick={this.onMenuChange}/>}/>,
                 <div id={2} children={<ExportMenu setPassword={this.didSetPassword} disable={this.state.lock} link={this.state.link} error={this.state.error} handleCopyClick={this.handleCopyClick} copyClicked={this.state.copyClicked}/>}/>
             ])}</div>);
@@ -267,19 +293,23 @@ module.exports = (Plugin, Library) => {
                 <div>
                     {this.createButton({
                         onClick: () => {
-                            importZIP(this.state.importPath, pass).catch(err => {
-                                this.setState({error: err});
+                            this.setState({lock: true});
+                            importZIP(this.state.importPath, this.state.importValue === "link", pass).then(() => {
+                                this.setState({lock: false});
+                                location.reload();
+                            }).catch(err => {
+                                this.setState({lock: false, error: err});
                             });
                         },
-                        disabled: !(urlIsValid(this.state.importPath) || (this.state.importValue == "local" && this.state.importPath.length > 0))
-                    }, "Import")}
+                        disabled: !(urlIsValid(this.state.importPath) || (this.state.importValue == "local" && this.state.importPath.length > 0)) || this.state.lock
+                    }, this.state.lock ? React.createElement(DiscordModules.Spinner, {type: DiscordModules.Spinner.Type.PULSING_ELLIPSIS}, []) : "Import & Reload")}
                 </div>
             ) : (
                 <div className="mainMenu">
                     {this.createButton({
                         className: "buttonPaddingRight",
                         onClick: () => { exportZIP(pass); },
-                        disabled: this.state.lock
+                        disabled: this.state.lock || !hasAnyCategoryEnabled()
                     }, "Export ZIP")}
                     {this.createButton({onClick: () => {
                         this.setCanClose(false);
@@ -291,7 +321,7 @@ module.exports = (Plugin, Library) => {
                             this.setCanClose(true);
                             this.setState({lock: false, error: err});
                         })
-                    }, disabled: this.state.lock}, this.state.lock ? React.createElement(DiscordModules.Spinner, {type: DiscordModules.Spinner.Type.PULSING_ELLIPSIS}, []) : "Upload")}
+                    }, disabled: this.state.lock || !hasAnyCategoryEnabled()}, this.state.lock ? React.createElement(DiscordModules.Spinner, {type: DiscordModules.Spinner.Type.PULSING_ELLIPSIS}, []) : "Upload")}
                 </div>
             );
         }
@@ -310,8 +340,8 @@ module.exports = (Plugin, Library) => {
                 React.createElement(ModalContent, null, [
                     this.renderMainArea()
                 ]),
-                React.createElement(ModalFooter, {className: shouldShowButtons ? "" : "customFooter", justify: justifyStyles.justifyBetween}, !shouldShowButtons ? [] : [
-                    this.getPageButtons(),
+                React.createElement(ModalFooter, {justify: shouldShowButtons ? justifyStyles.justifyBetween : justifyStyles.justifyEnd}, [
+                    (shouldShowButtons && this.getPageButtons()),
                     this.createButton({
                         onClick: () => { ModalActions.closeModal("SettingsSync"); }, 
                         look: buttonLookStyles.lookLink,  
@@ -360,7 +390,7 @@ module.exports = (Plugin, Library) => {
     };
 
     async function openZIP(): Promise<string> {
-        const res = await master.fileManager.showOpenDialog({
+        const res = await DiscordNative.fileManager.showOpenDialog({
             title: "Import BD Settings...",
             filters: [
                 {name: "BD Files", extensions: ["zip"]}
@@ -378,30 +408,98 @@ module.exports = (Plugin, Library) => {
         return res[0];
     }
 
-    async function importZIP(path: string, password?: string) {
-        const Minizip = require('minizip-asm.js');
-        let zipFile = new Minizip(await require("fs/promises").readFile(path));
+    async function importZIP(pathStr: string, isURL: boolean, password?: string) {
+        const fs = require("fs/promises");
+        const path = require("path");
+        if (isURL) {
+            const tempFolder = await fs.mkdtemp(path.join(require("os").tmpdir(), `settingsync-download-${require("crypto").randomBytes(16).toString("hex")}`));
+            const dest = path.join(tempFolder, "settingsSync.zip");
+            const file = require("fs").createWriteStream(dest);
+            await new Promise<void>((resolve, reject) => {
+                try {
+                    require("https").get(pathStr, response => {
+                        response.pipe(file);
+                        file.on("finish", () => {
+                            file.close();
+                            resolve();
+                        });
+                    }).on("error", err => {
+                        fs.unlink(dest);
+                        reject(err);
+                    });
+                } catch (e) {
+                    reject(e.message);
+                }
+            });
 
-        if (password == null && zipFile.list().some(file => file.crypt)) { // TODO: Check that password is correct
+            pathStr = dest;
+        }
+
+        const Minizip = require('minizip-asm.js');
+        let zipFile = new Minizip(await require("fs/promises").readFile(pathStr));
+
+        const zipContents = zipFile.list();
+        const zipIsEncrypted = zipContents.some(file => file.crypt);
+        if (password == null && zipIsEncrypted) { // TODO: Check that password is correct
             throw "No password supplied for encrypted ZIP file";
         }
 
-        Logger.log(zipFile.list());
+        // Only import stuff that was selected in settings
+        const toImport = zipContents.filter(element => {
+            const path = element.filepath;
+            if (settings.syncMeta && path.match(`^${releaseChannel}`)) {
+                return true;
+            }
+
+            if (settings.syncPluginSettings && path.match(/^plugins\/.*\.config\.json$/)) {
+                return true;
+            }
+
+            if (settings.syncPlugins && path.match(/^plugins\/.*\.plugin\.js$/)) {
+                return true;
+            }
+
+            if (settings.syncThemes && path.match(/^themes/)) {
+                return true;
+            }
+
+            return false;
+        }).map(element => element.filepath);
+
+        for (const targetPath of toImport) {
+            let fileContents = null;
+            try {
+                fileContents = zipFile.extract(targetPath, zipIsEncrypted ? {"password": password} : {});
+            } catch (_) {
+                throw "Incorrect password for encrypted ZIP file";
+            }
+            
+            try {
+                await fs.writeFile(path.join(BdApi.Plugins.folder, "..", targetPath.startsWith(releaseChannel) ? path.join("data", targetPath) : targetPath), fileContents, {
+                    // Overwrite if overwrite setting enabled or syncing BD config file
+                    flag: settings.overwrite || targetPath.startsWith(releaseChannel) ? "w" : "wx"
+                });
+            } catch (e) {
+                if (e.code !== "EEXIST") {
+                    throw e;
+                }
+            }
+        }
     }
 
     async function exportZIP(password?: string) {
-        const bytes = compressBD(password);
-        master.fileManager.saveWithDialog(bytes, "bdSettings.zip");
+        const bytes = await compressBD(password);
+        DiscordNative.fileManager.saveWithDialog(bytes, "settingsSync.zip");
     }
 
     async function uploadZIP(password?: string): Promise<string> {
-        const bytes = compressBD(password);
+        const bytes = await compressBD(password);
         const hash = require("crypto").createHash("sha1").update(bytes).digest("hex");
 
         // Upload file to tmp.ninja and get response
         const FormData = require("form-data");
         const form = new FormData();
-        form.append("files[]", Buffer.from(bytes), "bdSettings.zip");
+        form.append("files[]", Buffer.from(bytes), "settingsSync.zip");
 
         const options = {
             hostname: "tmp.ninja",
@@ -439,10 +537,11 @@ module.exports = (Plugin, Library) => {
     }
 
     // Returns compressed file bytes
-    function compressBD(password?: string): Uint8Array {
+    async function compressBD(password?: string): Promise<Uint8Array> {
         const Minizip = require('minizip-asm.js');
         const glob = require("glob");
         const path = require("path");
+        const fs = require("fs/promises");
 
         let zipFile = new Minizip();
 
@@ -464,20 +563,20 @@ module.exports = (Plugin, Library) => {
         }
 
         for (const pathStr of paths) {
-            zipFile.append(`plugins/${path.basename(pathStr)}`, pathStr, options);
+            zipFile.append(`plugins/${path.basename(pathStr)}`, await fs.readFile(pathStr), options);
         }
 
         if (settings.syncThemes) {
             const paths = glob.sync(path.join(BdApi.Themes.folder, "*.theme.css"));
             for (const pathStr of paths) {
-                zipFile.append(`themes/${path.basename(pathStr)}`, pathStr, options);
+                zipFile.append(`themes/${path.basename(pathStr)}`, await fs.readFile(pathStr), options);
             }
         }
 
         if (settings.syncMeta) {
-            const paths = glob.sync(path.join(BdApi.Plugins.folder, "../data/stable", "*.*"));
+            const paths = glob.sync(path.join(BdApi.Plugins.folder, `../data/${releaseChannel}`, "*.*"));
             for (const pathStr of paths) {
-                zipFile.append(`stable/${path.basename(pathStr)}`, pathStr, options);
+                zipFile.append(`${releaseChannel}/${path.basename(pathStr)}`, await fs.readFile(pathStr), options);
             }
         }
 
@@ -584,10 +683,6 @@ module.exports = (Plugin, Library) => {
                 .uploadHeaderNotTop {
                     font-weight: bold;
                     margin: 10px 0 5px 0;
-                }
-
-                .customFooter {
-                    height: 32px;
                 }
 
                 .slides {

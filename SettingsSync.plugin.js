@@ -28,7 +28,7 @@
 @else@*/
 
 module.exports = (() => {
-    const config = {"info":{"name":"SettingsSync","authors":[{"name":"ImTheSquid","discord_id":"262055523896131584","github_username":"ImTheSquid","twitter_username":"ImTheSquid11"}],"version":"0.0.1","description":"Creates an easy way to sync plugins, themes, and settings between clients.","github":"https://github.com/ImTheSquid/BDSettingsSync","github_raw":"https://raw.githubusercontent.com/ImTheSquid/BDSettingsSync/master/SettingsSync.plugin.js"},"changelog":[{"title":"First Version","items":["Hello, World!"]}],"main":"bundled.js"};
+    const config = {"info":{"name":"SettingsSync","authors":[{"name":"ImTheSquid","discord_id":"262055523896131584","github_username":"ImTheSquid","twitter_username":"ImTheSquid11"}],"version":"1.0.0","description":"An easy way to sync plugins, plugin configs, themes, and BD settings between clients.","github":"https://github.com/ImTheSquid/BDSettingsSync","github_raw":"https://raw.githubusercontent.com/ImTheSquid/BDSettingsSync/master/SettingsSync.plugin.js"},"changelog":[{"title":"Initial Release","items":["Hello, World!"]}],"main":"bundled.js"};
 
     return !global.ZeresPluginLibrary ? class {
         constructor() {this._config = config;}
@@ -27799,7 +27799,7 @@ var require_glob = __commonJS({
 
 // index.tsx
   "use strict";
-  const { Logger, Patcher, WebpackModules, Settings, DiscordModules, Modals, DiscordClassModules, PluginUtilities } = Library;
+  const { Patcher, WebpackModules, Settings, DiscordModules, PluginUtilities } = Library;
   const { SettingPanel, Switch } = Settings;
   const { React } = BdApi;
   const { ModalRoot, ModalHeader, ModalContent, ModalFooter } = BdApi.findModuleByProps("ModalRoot");
@@ -27818,10 +27818,10 @@ var require_glob = __commonJS({
     var _a;
     return ((_a = mod.default) == null ? void 0 : _a.displayName) === "TextInput";
   });
-  const master = WebpackModules.getByProps("app", "clipboard", "features", "fileManager");
   const buttonLookStyles = BdApi.findModuleByProps("lookLink");
   const justifyStyles = BdApi.findModuleByProps("justifyBetween");
   const colorStyles = BdApi.findModuleByProps("colorPrimary");
+  const releaseChannel = DiscordNative.remoteApp.getReleaseChannel();
   function SwitchButton(props) {
     return /* @__PURE__ */ React.createElement("button", {
       onClick: props.onClick,
@@ -27855,34 +27855,10 @@ var require_glob = __commonJS({
       d: "M5,20h14v-2H5V20z M5,10h4v6h6v-6h4l-7-7L5,10z"
     })))));
   }
-  function ExportMenuUpload(props) {
-    return /* @__PURE__ */ React.createElement("div", {
-      className: "uploadReady"
-    }, /* @__PURE__ */ React.createElement("p", {
-      className: "uploadHeader"
-    }, "Export Manifest:"), /* @__PURE__ */ React.createElement("ul", null, props.items), /* @__PURE__ */ React.createElement("p", {
-      class: "uploadHeaderNotTop"
-    }, "Password (Optional):"), React.createElement(textInput.default, { maxLength: 999, onChange: (val) => {
-      props.setPassword(val);
-    }, type: "password", disabled: props.disable }), props.disable && /* @__PURE__ */ React.createElement("p", {
-      className: "topMargin"
-    }, "Uploading ZIP, this may take a while..."), props.link !== null && /* @__PURE__ */ React.createElement("div", {
-      className: "topMargin"
-    }, /* @__PURE__ */ React.createElement("h3", null, "Your plugins, themes, and related settings have now been uploaded to tmp.ninja. To retrieve your files, open SettingsSync settings on your other client and paste in this link:"), /* @__PURE__ */ React.createElement("h2", {
-      className: "clickToHighlight link",
-      onClick: props.handleClick
-    }, /* @__PURE__ */ React.createElement("strong", null, props.link)), props.showCopied && /* @__PURE__ */ React.createElement("p", {
-      className: "copied"
-    }, "Copied!")), props.error !== null && /* @__PURE__ */ React.createElement("p", {
-      class: "topMargin error"
-    }, /* @__PURE__ */ React.createElement("strong", null, "Error:"), " ", props.error));
+  function hasAnyCategoryEnabled() {
+    return settings.syncMeta || settings.syncPluginSettings || settings.syncPlugins || settings.syncThemes;
   }
-  function ExportMenuError() {
-    return /* @__PURE__ */ React.createElement("p", {
-      className: "cantUpload"
-    }, "Looks like you don't have anything selected to upload! You can change this in the SettingsSync plugin settings.");
-  }
-  function ExportMenu(props) {
+  function EnabledCategories() {
     let listItems = [];
     if (settings.syncPlugins) {
       listItems.push(/* @__PURE__ */ React.createElement("li", null, "Plugins"));
@@ -27896,17 +27872,46 @@ var require_glob = __commonJS({
     if (settings.syncMeta) {
       listItems.push(/* @__PURE__ */ React.createElement("li", null, "BD Metadata"));
     }
-    return /* @__PURE__ */ React.createElement("div", null, listItems.length > 0 && ExportMenuUpload({
-      items: listItems,
+    return /* @__PURE__ */ React.createElement("ul", null, listItems);
+  }
+  function ExportMenuUpload(props) {
+    return /* @__PURE__ */ React.createElement("div", {
+      className: "uploadReady"
+    }, /* @__PURE__ */ React.createElement("p", {
+      className: "uploadHeader"
+    }, "Export Manifest:"), /* @__PURE__ */ React.createElement(EnabledCategories, null), /* @__PURE__ */ React.createElement("p", {
+      class: "uploadHeaderNotTop"
+    }, "Password (Optional):"), React.createElement(textInput.default, { maxLength: 999, onChange: (val) => {
+      props.setPassword(val);
+    }, type: "password", disabled: props.disable }), props.disable && /* @__PURE__ */ React.createElement("p", {
+      className: "topMargin"
+    }, "Uploading ZIP, this may take a few minutes..."), props.link !== null && /* @__PURE__ */ React.createElement("div", {
+      className: "topMargin"
+    }, /* @__PURE__ */ React.createElement("h3", null, "Your plugins, themes, and related settings have now been uploaded to tmp.ninja. To retrieve your files, open SettingsSync settings on your other client and paste in this link:"), /* @__PURE__ */ React.createElement("h2", {
+      className: "clickToHighlight link",
+      onClick: props.handleClick
+    }, /* @__PURE__ */ React.createElement("strong", null, props.link)), props.showCopied && /* @__PURE__ */ React.createElement("p", {
+      className: "copied"
+    }, "Copied!")), props.error !== null && /* @__PURE__ */ React.createElement("p", {
+      class: "topMargin error"
+    }, /* @__PURE__ */ React.createElement("strong", null, "Error:"), " ", props.error));
+  }
+  function MenuCategoryError(action) {
+    return /* @__PURE__ */ React.createElement("p", {
+      className: "cantUpload"
+    }, "Looks like you don't have any categories selected to ", action, "! You can change this in the SettingsSync plugin settings.");
+  }
+  function ExportMenu(props) {
+    return /* @__PURE__ */ React.createElement("div", null, hasAnyCategoryEnabled() && ExportMenuUpload({
       disable: props.disable,
       setPassword: props.setPassword,
       link: props.link,
       error: props.error,
       handleClick: props.handleCopyClick,
       showCopied: props.copyClicked
-    }), listItems.length == 0 && ExportMenuError());
+    }), !hasAnyCategoryEnabled() && MenuCategoryError("export"));
   }
-  function ImportMenu(props) {
+  function ImportMenuMain(props) {
     return /* @__PURE__ */ React.createElement("div", {
       className: "uploadReady"
     }, /* @__PURE__ */ React.createElement("p", {
@@ -27936,18 +27941,24 @@ var require_glob = __commonJS({
       onClick: () => {
         props.getZIP();
       },
-      color: colorStyles.colorPrimary
+      color: colorStyles.colorPrimary,
+      disabled: props.disable
     }, "Select..."), props.importPath.length > 0 && /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Path:"), " ", props.importPath)), /* @__PURE__ */ React.createElement("p", {
       className: "cantUpload"
     }, /* @__PURE__ */ React.createElement("strong", null, "WARNING:"), " Only import from sources you trust!"), /* @__PURE__ */ React.createElement("p", {
       class: "uploadHeaderNotTop"
     }, "Password if Encrypted:"), React.createElement(textInput.default, { maxLength: 999, onChange: (val) => {
       props.setPassword(val);
-    }, type: "password", disabled: props.disable }), settings.overwrite && /* @__PURE__ */ React.createElement("p", {
+    }, type: "password", disabled: props.disable }), /* @__PURE__ */ React.createElement("p", {
+      className: "uploadHeaderNotTop"
+    }, "Import Manifest:"), /* @__PURE__ */ React.createElement(EnabledCategories, null), settings.overwrite && /* @__PURE__ */ React.createElement("p", {
       class: "cantUpload"
-    }, /* @__PURE__ */ React.createElement("strong", null, "WARNING:"), " Overwrite mode enabled, all selected data types will be overwritten on import!"), props.error !== null && /* @__PURE__ */ React.createElement("p", {
+    }, /* @__PURE__ */ React.createElement("strong", null, "WARNING:"), " Overwrite mode enabled, all import categories listed above will be overwritten on import!"), props.error !== null && /* @__PURE__ */ React.createElement("p", {
       class: "topMargin error"
     }, /* @__PURE__ */ React.createElement("strong", null, "Error:"), " ", props.error));
+  }
+  function ImportMenu(props) {
+    return /* @__PURE__ */ React.createElement("div", null, hasAnyCategoryEnabled() && ImportMenuMain(props), !hasAnyCategoryEnabled() && MenuCategoryError("import"));
   }
   let canCloseModal = true;
   function urlIsValid(urlString) {
@@ -28001,6 +28012,9 @@ var require_glob = __commonJS({
       this.setState({ copyClicked: true });
     }
     handleImportTypeChange(val) {
+      if (this.state.lock) {
+        return;
+      }
       this.setState({ importPath: "", importValue: val, error: null });
     }
     getZIP() {
@@ -28028,7 +28042,8 @@ var require_glob = __commonJS({
             getZIP: this.getZIP,
             importValue: this.state.importValue,
             importPath: this.state.importPath,
-            error: this.state.error
+            error: this.state.error,
+            disable: this.state.lock
           })
         }),
         /* @__PURE__ */ React.createElement("div", {
@@ -28057,19 +28072,23 @@ var require_glob = __commonJS({
       const pass = this.state.password.length > 0 ? this.state.password : null;
       return this.state.activeSlide == 0 ? /* @__PURE__ */ React.createElement("div", null, this.createButton({
         onClick: () => {
-          importZIP(this.state.importPath, pass).catch((err) => {
-            this.setState({ error: err });
+          this.setState({ lock: true });
+          importZIP(this.state.importPath, this.state.importValue === "link", pass).then(() => {
+            this.setState({ lock: false });
+            location.reload();
+          }).catch((err) => {
+            this.setState({ lock: false, error: err });
           });
         },
-        disabled: !(urlIsValid(this.state.importPath) || this.state.importValue == "local" && this.state.importPath.length > 0)
-      }, "Import")) : /* @__PURE__ */ React.createElement("div", {
+        disabled: !(urlIsValid(this.state.importPath) || this.state.importValue == "local" && this.state.importPath.length > 0) || this.state.lock
+      }, this.state.lock ? React.createElement(DiscordModules.Spinner, { type: DiscordModules.Spinner.Type.PULSING_ELLIPSIS }, []) : "Import & Reload")) : /* @__PURE__ */ React.createElement("div", {
         className: "mainMenu"
       }, this.createButton({
         className: "buttonPaddingRight",
         onClick: () => {
           exportZIP(pass);
         },
-        disabled: this.state.lock
+        disabled: this.state.lock || !hasAnyCategoryEnabled()
       }, "Export ZIP"), this.createButton({ onClick: () => {
         this.setCanClose(false);
         this.setState({ lock: true, link: null, error: null });
@@ -28080,7 +28099,7 @@ var require_glob = __commonJS({
           this.setCanClose(true);
           this.setState({ lock: false, error: err });
         });
-      }, disabled: this.state.lock }, this.state.lock ? React.createElement(DiscordModules.Spinner, { type: DiscordModules.Spinner.Type.PULSING_ELLIPSIS }, []) : "Upload"));
+      }, disabled: this.state.lock || !hasAnyCategoryEnabled() }, this.state.lock ? React.createElement(DiscordModules.Spinner, { type: DiscordModules.Spinner.Type.PULSING_ELLIPSIS }, []) : "Upload"));
     }
     render() {
       const shouldShowButtons = this.state.activeSlide !== 1;
@@ -28095,8 +28114,8 @@ var require_glob = __commonJS({
         React.createElement(ModalContent, null, [
           this.renderMainArea()
         ]),
-        React.createElement(ModalFooter, { className: shouldShowButtons ? "" : "customFooter", justify: justifyStyles.justifyBetween }, !shouldShowButtons ? [] : [
-          this.getPageButtons(),
+        React.createElement(ModalFooter, { justify: shouldShowButtons ? justifyStyles.justifyBetween : justifyStyles.justifyEnd }, [
+          shouldShowButtons && this.getPageButtons(),
           this.createButton({
             onClick: () => {
               ModalActions.closeModal("SettingsSync");
@@ -28140,7 +28159,7 @@ var require_glob = __commonJS({
     settings = PluginUtilities.loadSettings("SettingsSync", defaultSettings);
   };
   async function openZIP() {
-    const res = await master.fileManager.showOpenDialog({
+    const res = await DiscordNative.fileManager.showOpenDialog({
       title: "Import BD Settings...",
       filters: [
         { name: "BD Files", extensions: ["zip"] }
@@ -28155,24 +28174,82 @@ var require_glob = __commonJS({
     }
     return res[0];
   }
-  async function importZIP(path2, password) {
+  async function importZIP(pathStr, isURL, password) {
+    const fs2 = require("fs/promises");
+    const path2 = require("path");
+    if (isURL) {
+      const tempFolder = await fs2.mkdtemp(path2.join(require("os").tmpdir(), `settingsync-download-${require("crypto").randomBytes(16).toString("hex")}`));
+      const dest = path2.join(tempFolder, "settingsSync.zip");
+      const file = require("fs").createWriteStream(dest);
+      await new Promise((resolve, reject) => {
+        try {
+          require("https").get(pathStr, (response) => {
+            response.pipe(file);
+            file.on("finish", () => {
+              file.close();
+              resolve();
+            });
+          }).on("error", (err) => {
+            fs2.unlink(dest);
+            reject(err);
+          });
+        } catch (e) {
+          reject(e.message);
+        }
+      });
+      pathStr = dest;
+    }
     const Minizip2 = require_minizip_asm_min();
-    let zipFile = new Minizip2(await require("fs/promises").readFile(path2));
-    if (password == null && zipFile.list().some((file) => file.crypt)) {
+    let zipFile = new Minizip2(await require("fs/promises").readFile(pathStr));
+    const zipContents = zipFile.list();
+    const zipIsEncrypted = zipContents.some((file) => file.crypt);
+    if (password == null && zipIsEncrypted) {
       throw "No password supplied for encrypted ZIP file";
     }
-    Logger.log(zipFile.list());
+    const toImport = zipContents.filter((element) => {
+      const path3 = element.filepath;
+      if (settings.syncMeta && path3.match(`^${releaseChannel}`)) {
+        return true;
+      }
+      if (settings.syncPluginSettings && path3.match(/^plugins\/.*\.config\.json$/)) {
+        return true;
+      }
+      if (settings.syncPlugins && path3.match(/^plugins\/.*\.plugin\.js$/)) {
+        return true;
+      }
+      if (settings.syncThemes && path3.match(/^themes/)) {
+        return true;
+      }
+      return false;
+    }).map((element) => element.filepath);
+    for (const targetPath of toImport) {
+      let fileContents = null;
+      try {
+        fileContents = zipFile.extract(targetPath, zipIsEncrypted ? { "password": password } : {});
+      } catch (_) {
+        throw "Incorrect password for encrypted ZIP file";
+      }
+      try {
+        await fs2.writeFile(path2.join(BdApi.Plugins.folder, "..", targetPath.startsWith(releaseChannel) ? path2.join("data", targetPath) : targetPath), fileContents, {
+          flag: settings.overwrite || targetPath.startsWith(releaseChannel) ? "w" : "wx"
+        });
+      } catch (e) {
+        if (e.code !== "EEXIST") {
+          throw e;
+        }
+      }
+    }
   }
   async function exportZIP(password) {
-    const bytes = compressBD(password);
-    master.fileManager.saveWithDialog(bytes, "bdSettings.zip");
+    const bytes = await compressBD(password);
+    DiscordNative.fileManager.saveWithDialog(bytes, "settingsSync.zip");
   }
   async function uploadZIP(password) {
-    const bytes = compressBD(password);
+    const bytes = await compressBD(password);
     const hash = require("crypto").createHash("sha1").update(bytes).digest("hex");
     const FormData = require_form_data();
     const form = new FormData();
-    form.append("files[]", Buffer.from(bytes), "bdSettings.zip");
+    form.append("files[]", Buffer.from(bytes), "settingsSync.zip");
     const options = {
       hostname: "tmp.ninja",
       port: 443,
@@ -28205,10 +28282,11 @@ var require_glob = __commonJS({
       req.end();
     });
   }
-  function compressBD(password) {
+  async function compressBD(password) {
     const Minizip2 = require_minizip_asm_min();
     const glob = require_glob();
     const path2 = require("path");
+    const fs2 = require("fs/promises");
     let zipFile = new Minizip2();
     let options = {
       encoding: "utf-8"
@@ -28224,18 +28302,18 @@ var require_glob = __commonJS({
       paths.push(...glob.sync(path2.join(BdApi.Plugins.folder, "*.config.json")));
     }
     for (const pathStr of paths) {
-      zipFile.append(`plugins/${path2.basename(pathStr)}`, pathStr, options);
+      zipFile.append(`plugins/${path2.basename(pathStr)}`, await fs2.readFile(pathStr), options);
     }
     if (settings.syncThemes) {
       const paths2 = glob.sync(path2.join(BdApi.Themes.folder, "*.theme.css"));
       for (const pathStr of paths2) {
-        zipFile.append(`themes/${path2.basename(pathStr)}`, pathStr, options);
+        zipFile.append(`themes/${path2.basename(pathStr)}`, await fs2.readFile(pathStr), options);
       }
     }
     if (settings.syncMeta) {
-      const paths2 = glob.sync(path2.join(BdApi.Plugins.folder, "../data/stable", "*.*"));
+      const paths2 = glob.sync(path2.join(BdApi.Plugins.folder, `../data/${releaseChannel}`, "*.*"));
       for (const pathStr of paths2) {
-        zipFile.append(`stable/${path2.basename(pathStr)}`, pathStr, options);
+        zipFile.append(`${releaseChannel}/${path2.basename(pathStr)}`, await fs2.readFile(pathStr), options);
       }
     }
     return zipFile.zip();
@@ -28338,10 +28416,6 @@ var require_glob = __commonJS({
                 .uploadHeaderNotTop {
                     font-weight: bold;
                     margin: 10px 0 5px 0;
-                }
-
-                .customFooter {
-                    height: 32px;
                 }
 
                 .slides {
