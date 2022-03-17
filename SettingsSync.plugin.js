@@ -1,7 +1,7 @@
 /**
  * @name SettingsSync
- * @website https://github.com/ImTheSquid/BDSettingsSync
- * @source https://raw.githubusercontent.com/ImTheSquid/BDSettingsSync/master/SettingsSync.plugin.js
+ * @website https://github.com/ImTheSquid/SettingsSync
+ * @source https://raw.githubusercontent.com/ImTheSquid/SettingsSync/master/SettingsSync.plugin.js
  */
 /*@cc_on
 @if (@_jscript)
@@ -28,7 +28,7 @@
 @else@*/
 
 module.exports = (() => {
-    const config = {"info":{"name":"SettingsSync","authors":[{"name":"ImTheSquid","discord_id":"262055523896131584","github_username":"ImTheSquid","twitter_username":"ImTheSquid11"}],"version":"1.0.0","description":"An easy way to sync plugins, plugin configs, themes, and BD settings between clients.","github":"https://github.com/ImTheSquid/BDSettingsSync","github_raw":"https://raw.githubusercontent.com/ImTheSquid/BDSettingsSync/master/SettingsSync.plugin.js"},"changelog":[{"title":"Initial Release","items":["Hello, World!"]}],"main":"bundled.js"};
+    const config = {"info":{"name":"SettingsSync","authors":[{"name":"ImTheSquid","discord_id":"262055523896131584","github_username":"ImTheSquid","twitter_username":"ImTheSquid11"}],"version":"1.0.0","description":"An easy way to sync plugins, plugin configs, themes, and BD settings between clients.","github":"https://github.com/ImTheSquid/SettingsSync","github_raw":"https://raw.githubusercontent.com/ImTheSquid/SettingsSync/master/SettingsSync.plugin.js"},"changelog":[{"title":"Initial Release","items":["Hello, World!"]}],"main":"bundled.js"};
 
     return !global.ZeresPluginLibrary ? class {
         constructor() {this._config = config;}

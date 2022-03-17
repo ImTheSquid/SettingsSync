@@ -9,8 +9,8 @@
         }],
         "version": "1.0.0",
         "description": "An easy way to sync plugins, plugin configs, themes, and BD settings between clients.",
-        "github": "https://github.com/ImTheSquid/BDSettingsSync",
-        "github_raw": "https://raw.githubusercontent.com/ImTheSquid/BDSettingsSync/master/SettingsSync.plugin.js"
+        "github": "https://github.com/ImTheSquid/SettingsSync",
+        "github_raw": "https://raw.githubusercontent.com/ImTheSquid/SettingsSync/master/SettingsSync.plugin.js"
     },
     "changelog": [
         {"title": "Initial Release", "items": ["Hello, World!"]}
