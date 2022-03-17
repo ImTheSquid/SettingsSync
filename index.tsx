@@ -88,7 +88,7 @@ module.exports = (Plugin, Library) => {
 
                 {props.link !== null && (
                     <div className="topMargin">
-                        <h3>Your plugins, themes, and related settings have now been uploaded to tmp.ninja. To retrieve your files, open SettingsSync settings on your other client and paste in this link:</h3>
+                        <h3>Your selected categories have now been uploaded to tmp.ninja. To retrieve your files, open SettingsSync: Import settings on your other client and paste in this link:</h3>
                         <h2 className="clickToHighlight link" onClick={props.handleClick}>
                             <strong>{props.link}</strong>
                         </h2>

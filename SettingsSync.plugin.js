@@ -27887,7 +27887,7 @@ var require_glob = __commonJS({
       className: "topMargin"
     }, "Uploading ZIP, this may take a few minutes..."), props.link !== null && /* @__PURE__ */ React.createElement("div", {
       className: "topMargin"
-    }, /* @__PURE__ */ React.createElement("h3", null, "Your plugins, themes, and related settings have now been uploaded to tmp.ninja. To retrieve your files, open SettingsSync settings on your other client and paste in this link:"), /* @__PURE__ */ React.createElement("h2", {
+    }, /* @__PURE__ */ React.createElement("h3", null, "Your selected categories have now been uploaded to tmp.ninja. To retrieve your files, open SettingsSync: Import settings on your other client and paste in this link:"), /* @__PURE__ */ React.createElement("h2", {
       className: "clickToHighlight link",
       onClick: props.handleClick
     }, /* @__PURE__ */ React.createElement("strong", null, props.link)), props.showCopied && /* @__PURE__ */ React.createElement("p", {
