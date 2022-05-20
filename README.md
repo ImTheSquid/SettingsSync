@@ -12,3 +12,4 @@ To get started, click the SettingsSync icon in the top right corner, next to the
 ## My Other Plugins
 - [SplitLargeFiles](https://github.com/ImTheSquid/SplitLargeFiles)
 - [StickerSnatcher](https://github.com/ImTheSquid/StickerSnatcher)
+- [PiPEmbeds](https://github.com/ImTheSquid/PiPEmbeds)
