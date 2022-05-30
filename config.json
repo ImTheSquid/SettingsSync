@@ -7,13 +7,13 @@
             "github_username": "ImTheSquid",
             "twitter_username": "ImTheSquid11"
         }],
-        "version": "1.0.0",
+        "version": "1.0.1",
         "description": "An easy way to sync plugins, plugin configs, themes, and BD settings between clients.",
         "github": "https://github.com/ImTheSquid/SettingsSync",
         "github_raw": "https://raw.githubusercontent.com/ImTheSquid/SettingsSync/master/SettingsSync.plugin.js"
     },
     "changelog": [
-        {"title": "Initial Release", "items": ["Hello, World!"]}
+        {"title": "Fixed Issues", "items": ["Fixed rendering issues"]}
     ],
     "main": "bundled.js"
 }

@@ -28,7 +28,7 @@
 @else@*/
 
 module.exports = (() => {
-    const config = {"info":{"name":"SettingsSync","authors":[{"name":"ImTheSquid","discord_id":"262055523896131584","github_username":"ImTheSquid","twitter_username":"ImTheSquid11"}],"version":"1.0.0","description":"An easy way to sync plugins, plugin configs, themes, and BD settings between clients.","github":"https://github.com/ImTheSquid/SettingsSync","github_raw":"https://raw.githubusercontent.com/ImTheSquid/SettingsSync/master/SettingsSync.plugin.js"},"changelog":[{"title":"Initial Release","items":["Hello, World!"]}],"main":"bundled.js"};
+    const config = {"info":{"name":"SettingsSync","authors":[{"name":"ImTheSquid","discord_id":"262055523896131584","github_username":"ImTheSquid","twitter_username":"ImTheSquid11"}],"version":"1.0.1","description":"An easy way to sync plugins, plugin configs, themes, and BD settings between clients.","github":"https://github.com/ImTheSquid/SettingsSync","github_raw":"https://raw.githubusercontent.com/ImTheSquid/SettingsSync/master/SettingsSync.plugin.js"},"changelog":[{"title":"Fixed Issues","items":["Fixed rendering issues"]}],"main":"bundled.js"};
 
     return !global.ZeresPluginLibrary ? class {
         constructor() {this._config = config;}
@@ -52,23 +52,7 @@ module.exports = (() => {
         stop() {}
     } : (([Plugin, Api]) => {
         const plugin = (Plugin, Library) => {
-var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getOwnPropSymbols = Object.getOwnPropertySymbols;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __propIsEnum = Object.prototype.propertyIsEnumerable;
-var __defNormalProp = (obj, key2, value) => key2 in obj ? __defProp(obj, key2, { enumerable: true, configurable: true, writable: true, value }) : obj[key2] = value;
-var __spreadValues = (a, b) => {
-  for (var prop in b || (b = {}))
-    if (__hasOwnProp.call(b, prop))
-      __defNormalProp(a, prop, b[prop]);
-  if (__getOwnPropSymbols)
-    for (var prop of __getOwnPropSymbols(b)) {
-      if (__propIsEnum.call(b, prop))
-        __defNormalProp(a, prop, b[prop]);
-    }
-  return a;
-};
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
@@ -27805,19 +27789,10 @@ var require_glob = __commonJS({
   const { ModalRoot, ModalHeader, ModalContent, ModalFooter } = BdApi.findModuleByProps("ModalRoot");
   const Button = BdApi.findModuleByProps("BorderColors");
   const ModalActions = BdApi.findModuleByProps("openModal", "useModalsStore");
-  const headerBar = WebpackModules.find((mod) => {
-    var _a;
-    return ((_a = mod.default) == null ? void 0 : _a.displayName) === "HeaderBarContainer";
-  });
-  const clickable = WebpackModules.find((mod) => {
-    var _a;
-    return ((_a = mod.default) == null ? void 0 : _a.displayName) === "Clickable";
-  });
+  const headerBar = WebpackModules.find((mod) => mod.default?.displayName === "HeaderBarContainer");
+  const clickable = WebpackModules.find((mod) => mod.default?.displayName === "Clickable");
   const slides = WebpackModules.find((mod) => mod.hasOwnProperty("Slides"));
-  const textInput = WebpackModules.find((mod) => {
-    var _a;
-    return ((_a = mod.default) == null ? void 0 : _a.displayName) === "TextInput";
-  });
+  const textInput = WebpackModules.find((mod) => mod.default?.displayName === "TextInput");
   const buttonLookStyles = BdApi.findModuleByProps("lookLink");
   const justifyStyles = BdApi.findModuleByProps("justifyBetween");
   const colorStyles = BdApi.findModuleByProps("colorPrimary");
@@ -28066,7 +28041,7 @@ var require_glob = __commonJS({
       ]));
     }
     createButton(props, name) {
-      return React.createElement(Button, __spreadValues({}, props), name);
+      return React.createElement(Button, { ...props }, name);
     }
     getPageButtons() {
       const pass = this.state.password.length > 0 ? this.state.password : null;
@@ -28321,8 +28296,8 @@ var require_glob = __commonJS({
   class SettingsSync extends Plugin {
     onStart() {
       reloadSettings();
-      Patcher.after(headerBar.default.prototype, "renderLoggedIn", (_, [arg2], ret) => {
-        ret.props.toolbar.props.children.push(React.createElement(DiscordModules.Tooltip, { text: "SettingsSync", position: "left" }, [
+      Patcher.after(headerBar, "default", (_, [arg2], ret) => {
+        ret.props.children.props.toolbar.push(React.createElement(DiscordModules.Tooltip, { text: "SettingsSync", position: "left" }, [
           React.createElement(clickable.default, {
             "aria-label": "SettingsSync",
             className: "iconWrapper clickable",
@@ -28442,7 +28417,9 @@ var require_glob = __commonJS({
             `);
     }
     openSyncModal() {
-      ModalActions.openModal((props) => /* @__PURE__ */ React.createElement(MenuModal, __spreadValues({}, props)), { onCloseRequest: attemptModalClose, modalKey: "SettingsSync" });
+      ModalActions.openModal((props) => /* @__PURE__ */ React.createElement(MenuModal, {
+        ...props
+      }), { onCloseRequest: attemptModalClose, modalKey: "SettingsSync" });
     }
     onStop() {
       Patcher.unpatchAll();

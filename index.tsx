@@ -23,7 +23,7 @@ module.exports = (Plugin, Library) => {
     function SwitchButton(props) {
         return (
             <button onClick={props.onClick} className="switchButton">
-                {...props.children}
+                {props.children}
                 <p>{props.title}</p>
             </button>
         );
@@ -33,12 +33,12 @@ module.exports = (Plugin, Library) => {
         return (
             <div className="mainMenu">
                 <SwitchButton title="Import" onClick={() => { props.onClick(0); }}>
-                    <svg fill="currentColor" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                <svg fill="currentColor" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
                         <g><rect/></g><g><path d="M5,20h14v-2H5V20z M19,9h-4V3H9v6H5l7,7L19,9z"/></g>
                     </svg>
                 </SwitchButton>
                 <SwitchButton title="Export" onClick={() => { props.onClick(2); }}>
-                    <svg fill="currentColor" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                <svg fill="currentColor" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
                         <g><rect/></g><g><path d="M5,20h14v-2H5V20z M5,10h4v6h6v-6h4l-7-7L5,10z"/></g>
                     </svg>
                 </SwitchButton>
@@ -587,8 +587,8 @@ module.exports = (Plugin, Library) => {
         onStart() {
             reloadSettings();
 
-            Patcher.after(headerBar.default.prototype, "renderLoggedIn", (_, [arg], ret) => {
-                ret.props.toolbar.props.children.push(React.createElement(DiscordModules.Tooltip, {text: "SettingsSync", position: "left"}, [
+            Patcher.after(headerBar, "default", (_, [arg], ret) => {
+                ret.props.children.props.toolbar.push(React.createElement(DiscordModules.Tooltip, {text: "SettingsSync", position: "left"}, [
                     React.createElement(clickable.default, {
                         "aria-label": "SettingsSync", 
                         className: "iconWrapper clickable",
